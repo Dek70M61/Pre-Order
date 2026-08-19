@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Store Name — Pre-Order</title>
+
+<!-- ============================================================
+  HOW TO EDIT THIS SITE (read me first)
+  - Store name, menu item, drinks list, and pickup window are all
+    set in the CONFIG object near the top of the <script> at the
+    bottom of this file. Nothing else needs to change for basic use.
+  - This is a single self-contained file. Just re-upload it wherever
+    you host it (Firebase Hosting, Netlify, GitHub Pages, etc.)
+============================================================= -->
+
+<style>
+  :root{
+    --paper:#F7F5EF;
+    --paper-dim:#EFEBE0;
+    --ink:#1F2A24;
+    --ink-soft:#5B6660;
+    --teal:#2F6F62;
+    --teal-dark:#1F4E44;
+    --orange:#E2703A;
+    --orange-dark:#C25A29;
+    --line:#D8D3C4;
+    --success:#3C8562;
+    --danger:#B4472F;
+    --radius:14px;
+    --shadow: 0 1px 2px rgba(31,42,36,0.06), 0 8px 24px rgba(31,42,36,0.06);
+    font-size: 16px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.45;
+    padding-bottom: 88px; /* room for mobile cart bar */
+  }
+  h1,h2,h3,.display{
+    font-family:'Space Grotesk','Inter',sans-serif;
+    letter-spacing:-0.01em;
+    margin:0;
+    color:var(--ink);
+  }
+  .mono{
+    font-family:'IBM Plex Mono','JetBrains Mono',monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  a{ color:inherit; }
+  button{ font-family:inherit; cursor:pointer; }
+  ::selection{ background:var(--orange); color:#fff; }
+
+  /* Background: faint graph-paper texture */
+  .bg-grid{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    opacity:0.35;
+  }
+
+  /* ---------- Header ---------- */
+  header.site{
+    position:sticky; top:0; z-index:30;
+    background:rgba(247,245,239,0.92);
+    backdrop-filter: blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  .header-inner{
+    max-width:1100px; margin:0 auto;
+    padding: 14px 18px;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:36px; height:36px; border-radius:10px;
+    background:var(--teal); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;
+    flex-shrink:0;
+  }
+  .brand-text .store-name{ font-size:1.15rem; font-weight:700; line-height:1.1; }
+  .brand-text .tagline{ font-size:0.72rem; color:var(--ink-soft); letter-spacing:0.03em; text-transform:uppercase; }
+
+  .cart-pill{
+    display:flex; align-items:center; gap:8px;
+    background:var(--ink); color:var(--paper);
+    border:none; border-radius:999px;
+    padding:9px 16px; font-size:0.88rem; font-weight:600;
+  }
+  .cart-pill .count{
+    background:var(--orange); color:#fff;
+    border-radius:999px; min-width:20px; height:20px; padding:0 5px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:0.72rem; font-family:'IBM Plex Mono',monospace;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{
+    max-width:1100px; margin:0 auto; padding: 34px 18px 10px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:0.72rem;
+    text-transform:uppercase; letter-spacing:0.12em; color:var(--teal-dark);
+    display:inline-flex; align-items:center; gap:8px; margin-bottom:10px;
+  }
+  .eyebrow::before{
+    content:""; width:7px; height:7px; border-radius:50%; background:var(--orange);
+    box-shadow:0 0 0 3px rgba(226,112,58,0.18);
+  }
+  .hero h1{ font-size:clamp(1.7rem, 4vw, 2.5rem); max-width:20ch; }
+  .hero p{ color:var(--ink-soft); max-width:52ch; margin-top:10px; font-size:0.98rem; }
+
+  /* ---------- Layout ---------- */
+  main{
+    max-width:1100px; margin:0 auto; padding: 8px 18px 40px;
+    display:grid; grid-template-columns: 1fr; gap:34px;
+  }
+  section.menu-section{ min-width:0; }
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    border-bottom:1px solid var(--line); padding-bottom:8px; margin-bottom:16px;
+  }
+  .section-head h2{ font-size:1.15rem; }
+  .section-head .hint{ font-size:0.76rem; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; }
+
+  /* ---------- Featured food item (single-item template) ---------- */
+  .food-card{
+    background:#fff; border:1px solid var(--line); border-radius: var(--radius);
+    padding:20px; box-shadow:var(--shadow);
+    display:grid; grid-template-columns: 96px 1fr; gap:16px;
+  }
+  .food-thumb{
+    width:96px; height:96px; border-radius:10px;
+    background:
+      repeating-linear-gradient(135deg, var(--paper-dim) 0 6px, #fff 6px 12px);
+    border:1px dashed var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-size:0.65rem; color:var(--ink-soft);
+    text-align:center; flex-shrink:0;
+  }
+  .food-title-row{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+  .food-name{ font-size:1.15rem; font-weight:700; }
+  .food-desc{ color:var(--ink-soft); font-size:0.9rem; margin-top:4px; max-width:48ch; }
+  .price{ font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--orange-dark); font-size:1.05rem; white-space:nowrap; }
+
+  .qty-row{ display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap; }
+  .stepper{ display:flex; align-items:center; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+  .stepper button{
+    width:34px; height:34px; border:none; background:#fff; font-size:1.1rem;
+    display:flex; align-items:center; justify-content:center; color:var(--ink);
+  }
+  .stepper button:hover{ background:var(--paper-dim); }
+  .stepper .qty-val{ width:32px; text-align:center; font-family:'IBM Plex Mono',monospace; font-weight:600; }
+
+  .notes-field{ margin-top:12px; }
+  .notes-field label{ font-size:0.78rem; color:var(--ink-soft); display:block; margin-bottom:5px; }
+  .notes-field textarea{
+    width:100%; min-height:56px; resize:vertical;
+    border:1px solid var(--line); border-radius:10px; padding:9px 11px;
+    font-family:inherit; font-size:0.88rem; background:var(--paper);
+  }
+  .notes-field textarea:focus{ outline:2px solid var(--teal); outline-offset:1px; }
+
+  .add-btn{
+    margin-top:14px; background:var(--teal); color:#fff; border:none;
+    border-radius:10px; padding:10px 18px; font-weight:600; font-size:0.9rem;
+    display:inline-flex; align-items:center; gap:8px;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+  .add-btn:hover{ background:var(--teal-dark); }
+  .add-btn:active{ transform:scale(0.97); }
+
+  /* ---------- Drinks grid (multi-item template) ---------- */
+  .drinks-grid{
+    display:grid; grid-template-columns: repeat(2, 1fr); gap:12px;
+  }
+  .drink-card{
+    background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:14px; display:flex; flex-direction:column; gap:8px;
+    position:relative;
+  }
+  .drink-card .tag{
+    position:absolute; top:10px; right:10px;
+    font-family:'IBM Plex Mono',monospace; font-size:0.65rem; color:var(--ink-soft);
+    border:1px dashed var(--line); border-radius:6px; padding:2px 6px;
+  }
+  .drink-name{ font-weight:700; font-size:0.98rem; padding-right:40px; }
+  .drink-desc{ font-size:0.78rem; color:var(--ink-soft); min-height:2.4em; }
+  .drink-bottom{ display:flex; align-items:center; justify-content:space-between; margin-top:auto; gap:8px; }
+  .drink-price{ font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--orange-dark); font-size:0.92rem; }
+  .drink-add{
+    background:var(--paper-dim); border:1px solid var(--line); color:var(--ink);
+    border-radius:8px; width:30px; height:30px; font-size:1.1rem; line-height:1;
+  }
+  .drink-add:hover{ background:var(--teal); border-color:var(--teal); color:#fff; }
+
+  /* ---------- Cart drawer ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(31,42,36,0.35);
+    z-index:40; opacity:0; pointer-events:none; transition:opacity 0.2s ease;
+  }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+
+  .drawer{
+    position:fixed; top:0; right:0; height:100%; width:100%; max-width:420px;
+    background:var(--paper); z-index:50;
+    box-shadow:-8px 0 30px rgba(0,0,0,0.12);
+    transform:translateX(100%); transition:transform 0.25s ease;
+    display:flex; flex-direction:column;
+  }
+  .drawer.open{ transform:translateX(0); }
+  .drawer-head{
+    padding:18px; border-bottom:1px dashed var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .drawer-head h2{ font-size:1.1rem; }
+  .icon-btn{
+    background:none; border:none; font-size:1.3rem; color:var(--ink-soft); padding:4px;
+  }
+  .drawer-body{ flex:1; overflow-y:auto; padding:14px 18px; }
+  .cart-item{
+    display:flex; gap:10px; padding:12px 0; border-bottom:1px solid var(--line);
+  }
+  .cart-item:last-child{ border-bottom:none; }
+  .cart-item-main{ flex:1; min-width:0; }
+  .cart-item-name{ font-weight:600; font-size:0.92rem; }
+  .cart-item-notes{ font-size:0.76rem; color:var(--ink-soft); margin-top:2px; font-style:italic; }
+  .cart-item-price{ font-family:'IBM Plex Mono',monospace; font-size:0.82rem; color:var(--ink-soft); margin-top:4px; }
+  .cart-item-actions{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+  .remove-link{ background:none; border:none; font-size:0.72rem; color:var(--danger); text-decoration:underline; padding:0; }
+  .empty-cart{ text-align:center; color:var(--ink-soft); padding:50px 10px; font-size:0.9rem; }
+
+  .drawer-foot{
+    border-top:1px dashed var(--line); padding:16px 18px;
+    background:var(--paper-dim);
+  }
+  .total-row{ display:flex; justify-content:space-between; font-weight:700; font-size:1.05rem; margin-bottom:12px; }
+  .checkout-btn{
+    width:100%; background:var(--orange); color:#fff; border:none;
+    border-radius:10px; padding:13px; font-weight:700; font-size:0.95rem;
+  }
+  .checkout-btn:hover{ background:var(--orange-dark); }
+  .checkout-btn:disabled{ background:var(--line); color:var(--ink-soft); cursor:not-allowed; }
+
+  /* Mobile sticky cart bar */
+  .mobile-cart-bar{
+    position:fixed; bottom:0; left:0; right:0; z-index:35;
+    background:var(--ink); color:var(--paper);
+    padding:12px 16px; display:flex; align-items:center; justify-content:space-between;
+    box-shadow:0 -6px 20px rgba(0,0,0,0.15);
+    transform:translateY(100%); transition:transform 0.2s ease;
+  }
+  .mobile-cart-bar.show{ transform:translateY(0); }
+  .mobile-cart-bar .label{ font-size:0.8rem; color:#c8cfc9; }
+  .mobile-cart-bar .amt{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1.05rem; }
+  .mobile-cart-bar button{
+    background:var(--orange); color:#fff; border:none; border-radius:8px;
+    padding:9px 16px; font-weight:600; font-size:0.88rem;
+  }
+
+  /* ---------- Checkout modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(31,42,36,0.45);
+    z-index:60; display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none; transition:opacity 0.2s ease;
+  }
+  .modal-overlay.open{ opacity:1; pointer-events:auto; }
+  .modal{
+    background:var(--paper); border-radius:18px 18px 0 0;
+    width:100%; max-width:480px; max-height:92vh; overflow-y:auto;
+    padding:22px; transform:translateY(30px); transition:transform 0.25s ease;
+    border:1px solid var(--line); border-bottom:none;
+  }
+  .modal-overlay.open .modal{ transform:translateY(0); }
+  .modal h2{ font-size:1.2rem; margin-bottom:4px; }
+  .modal .sub{ color:var(--ink-soft); font-size:0.85rem; margin-bottom:18px; }
+
+  .field-group{ margin-bottom:16px; }
+  .field-group label{ display:block; font-size:0.82rem; font-weight:600; margin-bottom:6px; }
+  .field-group select, .field-group input{
+    width:100%; border:1px solid var(--line); border-radius:10px;
+    padding:11px 12px; font-family:inherit; font-size:0.92rem; background:#fff;
+  }
+  .field-group select:focus, .field-group input:focus{ outline:2px solid var(--teal); outline-offset:1px; }
+
+  .order-summary{
+    background:#fff; border:1px dashed var(--line); border-radius:12px; padding:14px; margin-bottom:16px;
+  }
+  .order-summary .row{ display:flex; justify-content:space-between; font-size:0.85rem; padding:5px 0; }
+  .order-summary .row.total{ border-top:1px solid var(--line); margin-top:6px; padding-top:10px; font-weight:700; font-size:1rem; }
+
+  .pay-note{
+    display:flex; gap:10px; align-items:flex-start;
+    background:rgba(47,111,98,0.08); border:1px solid rgba(47,111,98,0.25);
+    border-radius:10px; padding:11px 12px; font-size:0.82rem; color:var(--teal-dark); margin-bottom:18px;
+  }
+
+  .confirm-btn{
+    width:100%; background:var(--teal); color:#fff; border:none;
+    border-radius:10px; padding:14px; font-weight:700; font-size:0.98rem;
+  }
+  .confirm-btn:hover{ background:var(--teal-dark); }
+  .confirm-btn:disabled{ background:var(--line); color:var(--ink-soft); }
+  .back-link{
+    display:block; text-align:center; margin-top:12px; font-size:0.82rem; color:var(--ink-soft);
+    background:none; border:none; text-decoration:underline; width:100%;
+  }
+
+  /* ---------- Confirmation ticket ---------- */
+  .ticket-wrap{ display:flex; justify-content:center; padding:30px 14px 60px; }
+  .ticket{
+    position:relative; width:100%; max-width:420px;
+    background:#fff; border:1px solid var(--line); border-radius:16px;
+    padding:26px 24px 22px; box-shadow:var(--shadow);
+  }
+  .ticket::before, .ticket::after{
+    content:""; position:absolute; width:22px; height:22px; border-radius:50%;
+    background:var(--paper); border:1px solid var(--line);
+    top:calc(100% - 190px);
+  }
+  .ticket::before{ left:-11px; }
+  .ticket::after{ right:-11px; }
+  .ticket-perf{
+    border-top:1px dashed var(--line); margin: 18px 0; position:relative;
+  }
+  .ticket-eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:0.7rem; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.1em; }
+  .ticket h2{ font-size:1.3rem; margin-top:4px; }
+  .order-id{ font-family:'IBM Plex Mono',monospace; font-size:0.95rem; color:var(--teal-dark); margin-top:2px; }
+  .ticket-rows .row{ display:flex; justify-content:space-between; font-size:0.86rem; padding:5px 0; }
+  .ticket-rows .row.total{ font-weight:700; font-size:1.05rem; border-top:1px solid var(--line); margin-top:6px; padding-top:10px; }
+  .status-stamp{
+    display:inline-flex; align-items:center; gap:8px;
+    border:2px solid var(--success); color:var(--success);
+    border-radius:8px; padding:7px 14px; font-weight:700; font-size:0.85rem;
+    text-transform:uppercase; letter-spacing:0.05em; font-family:'IBM Plex Mono',monospace;
+    transform:rotate(-2deg); margin-top:14px;
+  }
+  .status-stamp.preparing{ border-color:var(--orange); color:var(--orange-dark); }
+  .status-stamp.ready{ border-color:var(--teal); color:var(--teal-dark); background:rgba(47,111,98,0.06); }
+  .status-stamp .dot{ width:8px; height:8px; border-radius:50%; background:currentColor; animation:pulse 1.6s infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
+  .pay-line{ margin-top:16px; font-size:0.82rem; color:var(--ink-soft); }
+  .new-order-btn{
+    margin-top:20px; width:100%; background:var(--ink); color:#fff; border:none;
+    border-radius:10px; padding:12px; font-weight:600; font-size:0.9rem;
+  }
+
+  .toast{
+    position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px;
+    font-size:0.84rem; opacity:0; pointer-events:none; transition:all 0.2s ease; z-index:80;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+
+  /* ---------- Tablet / Desktop ---------- */
+  @media (min-width: 720px){
+    .drinks-grid{ grid-template-columns: repeat(3, 1fr); }
+    .mobile-cart-bar{ display:none; }
+    body{ padding-bottom:0; }
+  }
+  @media (min-width: 980px){
+    main{
+      grid-template-columns: 1fr 340px;
+      align-items:start;
+    }
+    .drinks-grid{ grid-template-columns: repeat(2, 1fr); }
+    .cart-pill{ display:none; }
+    .sidebar-cart{
+      position:sticky; top:88px;
+      background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:18px; max-height:calc(100vh - 120px);
+      display:flex; flex-direction:column;
+    }
+    .sidebar-cart h2{ font-size:1.05rem; margin-bottom:12px; }
+    .sidebar-cart .drawer-body{ padding:0; flex:1; overflow-y:auto; }
+    .sidebar-cart .drawer-foot{ background:none; border-top:1px dashed var(--line); padding:14px 0 0; margin-top:10px; }
+  }
+  @media (min-width: 1180px){
+    .drinks-grid{ grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<header class="site">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark" id="brandMark">SN</div>
+      <div class="brand-text">
+        <div class="store-name" id="storeNameHeader">Store Name</div>
+        <div class="tagline" id="storeTagline">Pre-order · pickup only</div>
+      </div>
+    </div>
+    <button class="cart-pill" id="cartPillBtn" aria-label="Open cart">
+      Cart <span class="count mono" id="cartCountPill">0</span>
+    </button>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="eyebrow">Pre-order &amp; pickup</div>
+  <h1 id="storeNameHero">Store Name</h1>
+  <p>Pick what you want, add any notes for the chef, choose a pickup time, and pay in person when you collect your order.</p>
+</div>
+
+<main>
+  <div>
+    <!-- FOOD (single menu item — template) -->
+    <section class="menu-section" id="foodSection">
+      <div class="section-head">
+        <h2>Food</h2>
+        <span class="hint">1 item on the menu today</span>
+      </div>
+      <div id="foodContainer"></div>
+    </section>
+
+    <!-- DRINKS (multiple items — template) -->
+    <section class="menu-section" style="margin-top:32px;" id="drinksSection">
+      <div class="section-head">
+        <h2>Drinks</h2>
+        <span class="hint" id="drinksCountHint">0 options</span>
+      </div>
+      <div class="drinks-grid" id="drinksContainer"></div>
+    </section>
+  </div>
+
+  <!-- Desktop sidebar cart -->
+  <aside class="sidebar-cart" id="sidebarCart">
+    <h2>Your order</h2>
+    <div class="drawer-body" id="sidebarCartBody"></div>
+    <div class="drawer-foot" id="sidebarCartFoot">
+      <div class="total-row"><span>Total</span><span class="mono" id="sidebarTotal">$0.00</span></div>
+      <button class="checkout-btn" id="sidebarCheckoutBtn" disabled>Choose pickup time</button>
+    </div>
+  </aside>
+</main>
+
+<!-- Mobile cart drawer -->
+<div class="overlay" id="drawerOverlay"></div>
+<div class="drawer" id="cartDrawer" role="dialog" aria-label="Cart">
+  <div class="drawer-head">
+    <h2>Your order</h2>
+    <button class="icon-btn" id="closeDrawerBtn" aria-label="Close cart">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerCartBody"></div>
+  <div class="drawer-foot">
+    <div class="total-row"><span>Total</span><span class="mono" id="drawerTotal">$0.00</span></div>
+    <button class="checkout-btn" id="drawerCheckoutBtn" disabled>Choose pickup time</button>
+  </div>
+</div>
+
+<!-- Mobile sticky bar -->
+<div class="mobile-cart-bar" id="mobileCartBar">
+  <div>
+    <div class="label" id="mobileItemCount">0 items</div>
+    <div class="amt mono" id="mobileTotal">$0.00</div>
+  </div>
+  <button id="mobileCartBtn">View cart</button>
+</div>
+
+<!-- Checkout modal -->
+<div class="modal-overlay" id="checkoutOverlay">
+  <div class="modal">
+    <h2>Pickup details</h2>
+    <div class="sub">Choose when you'll pick up your order.</div>
+
+    <div class="field-group">
+      <label for="pickupTimeSelect">Pickup time</label>
+      <select id="pickupTimeSelect"></select>
+    </div>
+
+    <div class="field-group">
+      <label for="customerName">Name for the order</label>
+      <input type="text" id="customerName" placeholder="e.g. Alex" autocomplete="name">
+    </div>
+
+    <div class="order-summary" id="checkoutSummary"></div>
+
+    <div class="pay-note">
+      💵 <span>Pay <strong id="payAmountNote">$0.00</strong> in person when you pick up your order. No online payment needed.</span>
+    </div>
+
+    <button class="confirm-btn" id="confirmOrderBtn">Confirm &amp; submit order</button>
+    <button class="back-link" id="backToCartBtn">← Back to cart</button>
+  </div>
+</div>
+
+<!-- Confirmation view -->
+<div class="modal-overlay" id="confirmationOverlay">
+  <div class="modal" style="border-radius:18px; border-bottom:1px solid var(--line);">
+    <div class="ticket-wrap" style="padding:6px 0 10px;">
+      <div class="ticket">
+        <div class="ticket-eyebrow">Order confirmed</div>
+        <h2 id="ticketStoreName">Store Name</h2>
+        <div class="order-id mono" id="ticketOrderId">#—</div>
+
+        <div id="ticketStatusWrap"></div>
+
+        <div class="ticket-perf"></div>
+
+        <div class="ticket-rows" id="ticketItems"></div>
+
+        <div class="pay-line">Pickup time: <strong id="ticketPickupTime">—</strong><br>
+        Name: <strong id="ticketCustomerName">—</strong></div>
+
+        <button class="new-order-btn" id="newOrderBtn">Place another order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // ============================================================
+  // 1. CONFIG — edit everything here
+  // ============================================================
+  const CONFIG = {
+    storeName: "Store Name",
+    tagline: "Pre-order · pickup only",
+    brandInitials: "SN",
+
+    // Single food item template. This is the one dish on the menu.
+    // Add a "notes" prompt so people can tell the chef how to cook it.
+    food: {
+      id: "food-1",
+      name: "Menu Item Name",
+      description: "Short description of the dish goes here — ingredients, what makes it good, any dietary notes.",
+      price: 8.00,
+      notesPlaceholder: "e.g. no onions, extra spicy, well done…"
+    },
+
+    // Drinks list template — add/remove/edit entries freely.
+    drinks: [
+      { id: "drink-1", name: "Drink Option 1", description: "Short description", price: 2.00, tag: "12oz" },
+      { id: "drink-2", name: "Drink Option 2", description: "Short description", price: 2.50, tag: "16oz" },
+      { id: "drink-3", name: "Drink Option 3", description: "Short description", price: 2.50, tag: "16oz" },
+      { id: "drink-4", name: "Drink Option 4", description: "Short description", price: 3.00, tag: "20oz" }
+    ],
+
+    // Pickup window: times are generated automatically between start/end.
+    pickup: {
+      start: "11:00",   // 24h "HH:MM"
+      end: "14:00",
+      intervalMinutes: 15
+    },
+
+    currency: "$"
+  };
+
+  // ============================================================
+  // 2. FIREBASE SETUP
+  // ============================================================
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, doc, onSnapshot, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBHYAjhLiIz8ghmMOHsyEz7AyWzymPaZCo",
+    authDomain: "pre-order-science-day.firebaseapp.com",
+    projectId: "pre-order-science-day",
+    storageBucket: "pre-order-science-day.firebasestorage.app",
+    messagingSenderId: "626064975047",
+    appId: "1:626064975047:web:f5a6b510d52adb062acae2",
+    measurementId: "G-1WVK4M44T1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const ordersCol = collection(db, "orders");
+
+  // ============================================================
+  // 3. STATE
+  // ============================================================
+  let cart = loadCart(); // { [itemId]: { id, name, price, qty, notes, category } }
+  let activeOrderUnsub = null;
+
+  function loadCart(){
+    try{
+      const raw = localStorage.getItem("preorder_cart");
+      return raw ? JSON.parse(raw) : {};
+    }catch(e){ return {}; }
+  }
+  function saveCart(){
+    localStorage.setItem("preorder_cart", JSON.stringify(cart));
+  }
+
+  function fmt(n){ return CONFIG.currency + n.toFixed(2); }
+
+  function cartItemsArray(){
+    return Object.values(cart).filter(i => i.qty > 0);
+  }
+  function cartTotal(){
+    return cartItemsArray().reduce((sum, i) => sum + i.price * i.qty, 0);
+  }
+  function cartCount(){
+    return cartItemsArray().reduce((sum, i) => sum + i.qty, 0);
+  }
+
+  // ============================================================
+  // 4. RENDER: header / brand
+  // ============================================================
+  document.getElementById("storeNameHeader").textContent = CONFIG.storeName;
+  document.getElementById("storeNameHero").textContent = CONFIG.storeName;
+  document.getElementById("storeTagline").textContent = CONFIG.tagline;
+  document.getElementById("brandMark").textContent = CONFIG.brandInitials;
+  document.getElementById("ticketStoreName").textContent = CONFIG.storeName;
+  document.title = CONFIG.storeName + " — Pre-Order";
+
+  // ============================================================
+  // 5. RENDER: food item
+  // ============================================================
+  const foodContainer = document.getElementById("foodContainer");
+  function renderFood(){
+    const f = CONFIG.food;
+    const existing = cart[f.id];
+    const qty = existing ? existing.qty : 0;
+
+    foodContainer.innerHTML = `
+      <div class="food-card">
+        <div class="food-thumb">photo<br>placeholder</div>
+        <div style="min-width:0;">
+          <div class="food-title-row">
+            <div>
+              <div class="food-name">${escapeHtml(f.name)}</div>
+              <div class="food-desc">${escapeHtml(f.description)}</div>
+            </div>
+            <div class="price mono">${fmt(f.price)}</div>
+          </div>
+          <div class="qty-row">
+            <div class="stepper">
+              <button type="button" data-action="dec" aria-label="Decrease quantity">−</button>
+              <span class="qty-val mono" id="foodQtyVal">${qty}</span>
+              <button type="button" data-action="inc" aria-label="Increase quantity">+</button>
+            </div>
+          </div>
+          <div class="notes-field">
+            <label for="foodNotes">Notes for the chef (optional)</label>
+            <textarea id="foodNotes" placeholder="${escapeHtml(f.notesPlaceholder)}">${escapeHtml(existing?.notes || "")}</textarea>
+          </div>
+          <button class="add-btn" id="foodAddBtn" type="button">+ Add to order</button>
+        </div>
+      </div>
+    `;
+
+    let localQty = qty;
+    const qtyEl = document.getElementById("foodQtyVal");
+    foodContainer.querySelector('[data-action="dec"]').onclick = () => {
+      localQty = Math.max(0, localQty - 1);
+      qtyEl.textContent = localQty;
+    };
+    foodContainer.querySelector('[data-action="inc"]').onclick = () => {
+      localQty = Math.min(20, localQty + 1);
+      qtyEl.textContent = localQty;
+    };
+    document.getElementById("foodAddBtn").onclick = () => {
+      const notes = document.getElementById("foodNotes").value.trim();
+      if (localQty <= 0){
+        showToast("Choose a quantity first");
+        return;
+      }
+      cart[f.id] = { id: f.id, name: f.name, price: f.price, qty: localQty, notes, category: "Food" };
+      saveCart();
+      renderAll();
+      showToast(f.name + " added to order");
+    };
+  }
+
+  // ============================================================
+  // 6. RENDER: drinks grid
+  // ============================================================
+  const drinksContainer = document.getElementById("drinksContainer");
+  function renderDrinks(){
+    document.getElementById("drinksCountHint").textContent = CONFIG.drinks.length + " option" + (CONFIG.drinks.length === 1 ? "" : "s");
+    drinksContainer.innerHTML = CONFIG.drinks.map(d => {
+      const qty = cart[d.id]?.qty || 0;
+      return `
+        <div class="drink-card">
+          ${d.tag ? `<span class="tag">${escapeHtml(d.tag)}</span>` : ""}
+          <div class="drink-name">${escapeHtml(d.name)}</div>
+          <div class="drink-desc">${escapeHtml(d.description || "")}</div>
+          <div class="drink-bottom">
+            <span class="drink-price mono">${fmt(d.price)}</span>
+            <button class="drink-add" type="button" data-id="${d.id}" aria-label="Add ${escapeHtml(d.name)}">+</button>
+          </div>
+          ${qty > 0 ? `<div style="font-size:0.72rem;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;">${qty} in order</div>` : ""}
+        </div>
+      `;
+    }).join("");
+
+    drinksContainer.querySelectorAll(".drink-add").forEach(btn => {
+      btn.onclick = () => {
+        const d = CONFIG.drinks.find(x => x.id === btn.dataset.id);
+        const existing = cart[d.id];
+        cart[d.id] = {
+          id: d.id, name: d.name, price: d.price,
+          qty: (existing?.qty || 0) + 1, notes: existing?.notes || "", category: "Drink"
+        };
+        saveCart();
+        renderAll();
+        showToast(d.name + " added");
+      };
+    });
+  }
+
+  // ============================================================
+  // 7. RENDER: cart (drawer + sidebar share the same markup)
+  // ============================================================
+  function cartBodyHtml(){
+    const items = cartItemsArray();
+    if (items.length === 0){
+      return `<div class="empty-cart">Your order is empty.<br>Add items from the menu to get started.</div>`;
+    }
+    return items.map(i => `
+      <div class="cart-item">
+        <div class="cart-item-main">
+          <div class="cart-item-name">${i.qty} × ${escapeHtml(i.name)}</div>
+          ${i.notes ? `<div class="cart-item-notes">“${escapeHtml(i.notes)}”</div>` : ""}
+          <div class="cart-item-price mono">${fmt(i.price * i.qty)}</div>
+        </div>
+        <div class="cart-item-actions">
+          <div class="stepper" style="transform:scale(0.85); transform-origin:right top;">
+            <button type="button" data-id="${i.id}" data-action="dec">−</button>
+            <span class="qty-val mono">${i.qty}</span>
+            <button type="button" data-id="${i.id}" data-action="inc">+</button>
+          </div>
+          <button class="remove-link" data-id="${i.id}" data-action="remove" type="button">Remove</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function wireCartBody(container){
+    container.querySelectorAll('[data-action="inc"]').forEach(btn => {
+      btn.onclick = () => { cart[btn.dataset.id].qty += 1; saveCart(); renderAll(); };
+    });
+    container.querySelectorAll('[data-action="dec"]').forEach(btn => {
+      btn.onclick = () => {
+        cart[btn.dataset.id].qty -= 1;
+        if (cart[btn.dataset.id].qty <= 0) delete cart[btn.dataset.id];
+        saveCart(); renderAll();
+      };
+    });
+    container.querySelectorAll('[data-action="remove"]').forEach(btn => {
+      btn.onclick = () => { delete cart[btn.dataset.id]; saveCart(); renderAll(); };
+    });
+  }
+
+  function renderCart(){
+    const html = cartBodyHtml();
+    const total = cartTotal();
+    const count = cartCount();
+
+    // Drawer (mobile)
+    const drawerBody = document.getElementById("drawerCartBody");
+    drawerBody.innerHTML = html;
+    wireCartBody(drawerBody);
+    document.getElementById("drawerTotal").textContent = fmt(total);
+    document.getElementById("drawerCheckoutBtn").disabled = count === 0;
+
+    // Sidebar (desktop)
+    const sidebarBody = document.getElementById("sidebarCartBody");
+    sidebarBody.innerHTML = html;
+    wireCartBody(sidebarBody);
+    document.getElementById("sidebarTotal").textContent = fmt(total);
+    document.getElementById("sidebarCheckoutBtn").disabled = count === 0;
+
+    // Pills / mobile bar
+    document.getElementById("cartCountPill").textContent = count;
+    document.getElementById("mobileItemCount").textContent = count + (count === 1 ? " item" : " items");
+    document.getElementById("mobileTotal").textContent = fmt(total);
+    document.getElementById("mobileCartBar").classList.toggle("show", count > 0);
+  }
+
+  function renderAll(){
+    renderFood();
+    renderDrinks();
+    renderCart();
+  }
+
+  // ============================================================
+  // 8. Cart drawer open/close (mobile)
+  // ============================================================
+  const drawerOverlay = document.getElementById("drawerOverlay");
+  const cartDrawer = document.getElementById("cartDrawer");
+  function openDrawer(){ drawerOverlay.classList.add("open"); cartDrawer.classList.add("open"); }
+  function closeDrawer(){ drawerOverlay.classList.remove("open"); cartDrawer.classList.remove("open"); }
+  document.getElementById("cartPillBtn").onclick = openDrawer;
+  document.getElementById("mobileCartBtn").onclick = openDrawer;
+  document.getElementById("closeDrawerBtn").onclick = closeDrawer;
+  drawerOverlay.onclick = closeDrawer;
+
+  // ============================================================
+  // 9. Checkout modal
+  // ============================================================
+  const checkoutOverlay = document.getElementById("checkoutOverlay");
+  const pickupSelect = document.getElementById("pickupTimeSelect");
+
+  function buildPickupTimes(){
+    const { start, end, intervalMinutes } = CONFIG.pickup;
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    let cur = sh * 60 + sm;
+    const last = eh * 60 + em;
+    const options = [];
+    while (cur <= last){
+      const h = Math.floor(cur / 60), m = cur % 60;
+      const label = to12h(h, m);
+      options.push({ value: `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`, label });
+      cur += intervalMinutes;
+    }
+    return options;
+  }
+  function to12h(h, m){
+    const period = h >= 12 ? "PM" : "AM";
+    let h12 = h % 12; if (h12 === 0) h12 = 12;
+    return `${h12}:${String(m).padStart(2,"0")} ${period}`;
+  }
+
+  function openCheckout(){
+    if (cartCount() === 0) return;
+    pickupSelect.innerHTML = buildPickupTimes()
+      .map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+
+    const items = cartItemsArray();
+    const total = cartTotal();
+    document.getElementById("checkoutSummary").innerHTML = items.map(i => `
+      <div class="row"><span>${i.qty} × ${escapeHtml(i.name)}</span><span class="mono">${fmt(i.price * i.qty)}</span></div>
+    `).join("") + `<div class="row total"><span>Total</span><span class="mono">${fmt(total)}</span></div>`;
+    document.getElementById("payAmountNote").textContent = fmt(total);
+
+    closeDrawer();
+    checkoutOverlay.classList.add("open");
+  }
+  function closeCheckout(){ checkoutOverlay.classList.remove("open"); }
+
+  document.getElementById("drawerCheckoutBtn").onclick = openCheckout;
+  document.getElementById("sidebarCheckoutBtn").onclick = openCheckout;
+  document.getElementById("backToCartBtn").onclick = () => { closeCheckout(); openDrawer(); };
+  checkoutOverlay.addEventListener("click", (e) => { if (e.target === checkoutOverlay) closeCheckout(); });
+
+  // ============================================================
+  // 10. Submit order -> Firestore
+  // ============================================================
+  const confirmBtn = document.getElementById("confirmOrderBtn");
+  confirmBtn.onclick = async () => {
+    const items = cartItemsArray();
+    if (items.length === 0) return;
+
+    const pickupTime = pickupSelect.options[pickupSelect.selectedIndex]?.textContent || "";
+    const pickupValue = pickupSelect.value;
+    const customerName = document.getElementById("customerName").value.trim() || "Guest";
+    const total = cartTotal();
+
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Submitting…";
+
+    try{
+      const docRef = await addDoc(ordersCol, {
+        storeName: CONFIG.storeName,
+        customerName,
+        items: items.map(i => ({
+          id: i.id, name: i.name, price: i.price, qty: i.qty,
+          notes: i.notes || "", category: i.category
+        })),
+        total,
+        pickupTime,
+        pickupValue,
+        status: "pending",
+        createdAt: serverTimestamp()
+      });
+
+      showConfirmation(docRef.id, items, total, pickupTime, customerName);
+
+      // Clear cart after successful submit
+      cart = {};
+      saveCart();
+      renderAll();
+      closeCheckout();
+    }catch(err){
+      console.error(err);
+      showToast("Couldn't submit order — check your connection and try again");
+    }finally{
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Confirm & submit order";
+    }
+  };
+
+  // ============================================================
+  // 11. Confirmation ticket + realtime status
+  // ============================================================
+  const confirmationOverlay = document.getElementById("confirmationOverlay");
+
+  function showConfirmation(orderId, items, total, pickupTime, customerName){
+    document.getElementById("ticketOrderId").textContent = "#" + orderId.slice(-6).toUpperCase();
+    document.getElementById("ticketPickupTime").textContent = pickupTime;
+    document.getElementById("ticketCustomerName").textContent = customerName;
+    document.getElementById("ticketItems").innerHTML = items.map(i => `
+      <div class="row"><span>${i.qty} × ${escapeHtml(i.name)}</span><span class="mono">${fmt(i.price * i.qty)}</span></div>
+    `).join("") + `<div class="row total"><span>Pay in person</span><span class="mono">${fmt(total)}</span></div>`;
+
+    renderStatusStamp("pending");
+    confirmationOverlay.classList.add("open");
+
+    // Live status tracking from the admin site
+    if (activeOrderUnsub) activeOrderUnsub();
+    activeOrderUnsub = onSnapshot(doc(db, "orders", orderId), (snap) => {
+      const data = snap.data();
+      if (data?.status) renderStatusStamp(data.status);
+    });
+  }
+
+  function renderStatusStamp(status){
+    const labels = { pending: "Pending", preparing: "Preparing", ready: "Ready for pickup", completed: "Completed" };
+    const cls = { pending: "", preparing: "preparing", ready: "ready", completed: "ready" };
+    document.getElementById("ticketStatusWrap").innerHTML = `
+      <div class="status-stamp ${cls[status] || ""}"><span class="dot"></span>${labels[status] || status}</div>
+    `;
+  }
+
+  document.getElementById("newOrderBtn").onclick = () => {
+    confirmationOverlay.classList.remove("open");
+    if (activeOrderUnsub) { activeOrderUnsub(); activeOrderUnsub = null; }
+  };
+
+  // ============================================================
+  // 12. Helpers
+  // ============================================================
+  function escapeHtml(str){
+    return String(str ?? "").replace(/[&<>"']/g, s => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    }[s]));
+  }
+
+  let toastTimer;
+  function showToast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+  }
+
+  // ============================================================
+  // 13. Init
+  // ============================================================
+  renderAll();
+</script>
+</body>
+</html>
