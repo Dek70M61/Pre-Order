@@ -1,17 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Store Name — Pre-Order</title>
+<title>Chicken Cheek — สั่งล่วงหน้า</title>
 
 <!-- ============================================================
-  HOW TO EDIT THIS SITE (read me first)
-  - Store name, menu item, drinks list, and pickup window are all
-    set in the CONFIG object near the top of the <script> at the
-    bottom of this file. Nothing else needs to change for basic use.
-  - This is a single self-contained file. Just re-upload it wherever
-    you host it (Firebase Hosting, Netlify, GitHub Pages, etc.)
+  วิธีแก้ไขเว็บนี้ (อ่านก่อน)
+  - ชื่อร้าน, เมนูอาหาร, รายการเครื่องดื่ม, ช่วงเวลารับอาหาร
+    ทั้งหมดตั้งค่าได้ที่ CONFIG object ด้านบนของ <script> ท้ายไฟล์
+  - ไฟล์นี้เป็นไฟล์เดียวจบ อัปโหลดขึ้น Firebase Hosting / Netlify /
+    GitHub Pages ได้เลย
 ============================================================= -->
 
 <style>
@@ -36,14 +35,14 @@
   body{
     background:var(--paper);
     color:var(--ink);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: 'Inter', 'Noto Sans Thai', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     -webkit-font-smoothing:antialiased;
-    line-height:1.45;
-    padding-bottom: 88px; /* room for mobile cart bar */
+    line-height:1.55;
+    padding-bottom: 88px;
   }
   h1,h2,h3,.display{
-    font-family:'Space Grotesk','Inter',sans-serif;
-    letter-spacing:-0.01em;
+    font-family:'Space Grotesk','Noto Sans Thai','Inter',sans-serif;
+    letter-spacing:-0.005em;
     margin:0;
     color:var(--ink);
   }
@@ -55,7 +54,6 @@
   button{ font-family:inherit; cursor:pointer; }
   ::selection{ background:var(--orange); color:#fff; }
 
-  /* Background: faint graph-paper texture */
   .bg-grid{
     position:fixed; inset:0; z-index:-1; pointer-events:none;
     background-image:
@@ -65,7 +63,6 @@
     opacity:0.35;
   }
 
-  /* ---------- Header ---------- */
   header.site{
     position:sticky; top:0; z-index:30;
     background:rgba(247,245,239,0.92);
@@ -86,8 +83,8 @@
     font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;
     flex-shrink:0;
   }
-  .brand-text .store-name{ font-size:1.15rem; font-weight:700; line-height:1.1; }
-  .brand-text .tagline{ font-size:0.72rem; color:var(--ink-soft); letter-spacing:0.03em; text-transform:uppercase; }
+  .brand-text .store-name{ font-size:1.15rem; font-weight:700; line-height:1.15; }
+  .brand-text .tagline{ font-size:0.72rem; color:var(--ink-soft); letter-spacing:0.03em; }
 
   .cart-pill{
     display:flex; align-items:center; gap:8px;
@@ -102,23 +99,39 @@
     font-size:0.72rem; font-family:'IBM Plex Mono',monospace;
   }
 
-  /* ---------- Hero ---------- */
-  .hero{
-    max-width:1100px; margin:0 auto; padding: 34px 18px 10px;
+  .resume-banner{
+    max-width:1100px; margin:12px auto 0; padding:0 18px;
+    display:none;
   }
+  .resume-banner.show{ display:block; }
+  .resume-banner-inner{
+    background:#fff; border:1px solid var(--teal); border-radius:12px;
+    padding:11px 14px; display:flex; align-items:center; justify-content:space-between;
+    gap:10px; font-size:0.85rem; box-shadow:var(--shadow);
+  }
+  .resume-banner-inner button.view{
+    background:var(--teal); color:#fff; border:none; border-radius:8px;
+    padding:7px 12px; font-size:0.8rem; font-weight:600; flex-shrink:0;
+  }
+  .resume-banner-inner button.dismiss{
+    background:none; border:none; color:var(--ink-soft); font-size:1rem; padding:2px 4px; flex-shrink:0;
+  }
+  .resume-banner-text{ flex:1; min-width:0; }
+  .resume-banner-text b{ font-family:'IBM Plex Mono',monospace; }
+
+  .hero{ max-width:1100px; margin:0 auto; padding: 26px 18px 10px; }
   .eyebrow{
     font-family:'IBM Plex Mono',monospace; font-size:0.72rem;
-    text-transform:uppercase; letter-spacing:0.12em; color:var(--teal-dark);
+    text-transform:uppercase; letter-spacing:0.1em; color:var(--teal-dark);
     display:inline-flex; align-items:center; gap:8px; margin-bottom:10px;
   }
   .eyebrow::before{
     content:""; width:7px; height:7px; border-radius:50%; background:var(--orange);
     box-shadow:0 0 0 3px rgba(226,112,58,0.18);
   }
-  .hero h1{ font-size:clamp(1.7rem, 4vw, 2.5rem); max-width:20ch; }
-  .hero p{ color:var(--ink-soft); max-width:52ch; margin-top:10px; font-size:0.98rem; }
+  .hero h1{ font-size:clamp(1.6rem, 4vw, 2.4rem); max-width:22ch; }
+  .hero p{ color:var(--ink-soft); max-width:56ch; margin-top:10px; font-size:0.96rem; }
 
-  /* ---------- Layout ---------- */
   main{
     max-width:1100px; margin:0 auto; padding: 8px 18px 40px;
     display:grid; grid-template-columns: 1fr; gap:34px;
@@ -131,7 +144,6 @@
   .section-head h2{ font-size:1.15rem; }
   .section-head .hint{ font-size:0.76rem; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; }
 
-  /* ---------- Featured food item (single-item template) ---------- */
   .food-card{
     background:#fff; border:1px solid var(--line); border-radius: var(--radius);
     padding:20px; box-shadow:var(--shadow);
@@ -139,12 +151,11 @@
   }
   .food-thumb{
     width:96px; height:96px; border-radius:10px;
-    background:
-      repeating-linear-gradient(135deg, var(--paper-dim) 0 6px, #fff 6px 12px);
+    background: repeating-linear-gradient(135deg, var(--paper-dim) 0 6px, #fff 6px 12px);
     border:1px dashed var(--line);
     display:flex; align-items:center; justify-content:center;
-    font-family:'IBM Plex Mono',monospace; font-size:0.65rem; color:var(--ink-soft);
-    text-align:center; flex-shrink:0;
+    font-family:'IBM Plex Mono',monospace; font-size:0.6rem; color:var(--ink-soft);
+    text-align:center; flex-shrink:0; padding:4px;
   }
   .food-title-row{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; }
   .food-name{ font-size:1.15rem; font-weight:700; }
@@ -178,21 +189,17 @@
   .add-btn:hover{ background:var(--teal-dark); }
   .add-btn:active{ transform:scale(0.97); }
 
-  /* ---------- Drinks grid (multi-item template) ---------- */
-  .drinks-grid{
-    display:grid; grid-template-columns: repeat(2, 1fr); gap:12px;
-  }
+  .drinks-grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap:12px; }
   .drink-card{
     background:#fff; border:1px solid var(--line); border-radius:12px;
-    padding:14px; display:flex; flex-direction:column; gap:8px;
-    position:relative;
+    padding:14px; display:flex; flex-direction:column; gap:8px; position:relative;
   }
   .drink-card .tag{
     position:absolute; top:10px; right:10px;
     font-family:'IBM Plex Mono',monospace; font-size:0.65rem; color:var(--ink-soft);
     border:1px dashed var(--line); border-radius:6px; padding:2px 6px;
   }
-  .drink-name{ font-weight:700; font-size:0.98rem; padding-right:40px; }
+  .drink-name{ font-weight:700; font-size:0.98rem; padding-right:44px; }
   .drink-desc{ font-size:0.78rem; color:var(--ink-soft); min-height:2.4em; }
   .drink-bottom{ display:flex; align-items:center; justify-content:space-between; margin-top:auto; gap:8px; }
   .drink-price{ font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--orange-dark); font-size:0.92rem; }
@@ -202,7 +209,6 @@
   }
   .drink-add:hover{ background:var(--teal); border-color:var(--teal); color:#fff; }
 
-  /* ---------- Cart drawer ---------- */
   .overlay{
     position:fixed; inset:0; background:rgba(31,42,36,0.35);
     z-index:40; opacity:0; pointer-events:none; transition:opacity 0.2s ease;
@@ -222,13 +228,9 @@
     display:flex; align-items:center; justify-content:space-between;
   }
   .drawer-head h2{ font-size:1.1rem; }
-  .icon-btn{
-    background:none; border:none; font-size:1.3rem; color:var(--ink-soft); padding:4px;
-  }
+  .icon-btn{ background:none; border:none; font-size:1.3rem; color:var(--ink-soft); padding:4px; }
   .drawer-body{ flex:1; overflow-y:auto; padding:14px 18px; }
-  .cart-item{
-    display:flex; gap:10px; padding:12px 0; border-bottom:1px solid var(--line);
-  }
+  .cart-item{ display:flex; gap:10px; padding:12px 0; border-bottom:1px solid var(--line); }
   .cart-item:last-child{ border-bottom:none; }
   .cart-item-main{ flex:1; min-width:0; }
   .cart-item-name{ font-weight:600; font-size:0.92rem; }
@@ -238,10 +240,7 @@
   .remove-link{ background:none; border:none; font-size:0.72rem; color:var(--danger); text-decoration:underline; padding:0; }
   .empty-cart{ text-align:center; color:var(--ink-soft); padding:50px 10px; font-size:0.9rem; }
 
-  .drawer-foot{
-    border-top:1px dashed var(--line); padding:16px 18px;
-    background:var(--paper-dim);
-  }
+  .drawer-foot{ border-top:1px dashed var(--line); padding:16px 18px; background:var(--paper-dim); }
   .total-row{ display:flex; justify-content:space-between; font-weight:700; font-size:1.05rem; margin-bottom:12px; }
   .checkout-btn{
     width:100%; background:var(--orange); color:#fff; border:none;
@@ -250,7 +249,6 @@
   .checkout-btn:hover{ background:var(--orange-dark); }
   .checkout-btn:disabled{ background:var(--line); color:var(--ink-soft); cursor:not-allowed; }
 
-  /* Mobile sticky cart bar */
   .mobile-cart-bar{
     position:fixed; bottom:0; left:0; right:0; z-index:35;
     background:var(--ink); color:var(--paper);
@@ -266,7 +264,6 @@
     padding:9px 16px; font-weight:600; font-size:0.88rem;
   }
 
-  /* ---------- Checkout modal ---------- */
   .modal-overlay{
     position:fixed; inset:0; background:rgba(31,42,36,0.45);
     z-index:60; display:flex; align-items:flex-end; justify-content:center;
@@ -291,9 +288,7 @@
   }
   .field-group select:focus, .field-group input:focus{ outline:2px solid var(--teal); outline-offset:1px; }
 
-  .order-summary{
-    background:#fff; border:1px dashed var(--line); border-radius:12px; padding:14px; margin-bottom:16px;
-  }
+  .order-summary{ background:#fff; border:1px dashed var(--line); border-radius:12px; padding:14px; margin-bottom:16px; }
   .order-summary .row{ display:flex; justify-content:space-between; font-size:0.85rem; padding:5px 0; }
   .order-summary .row.total{ border-top:1px solid var(--line); margin-top:6px; padding-top:10px; font-weight:700; font-size:1rem; }
 
@@ -313,8 +308,13 @@
     display:block; text-align:center; margin-top:12px; font-size:0.82rem; color:var(--ink-soft);
     background:none; border:none; text-decoration:underline; width:100%;
   }
+  .submit-error{
+    display:none; background:rgba(180,71,47,0.08); border:1px solid rgba(180,71,47,0.3);
+    color:var(--danger); border-radius:10px; padding:11px 12px; font-size:0.8rem;
+    margin-top:10px; line-height:1.5;
+  }
+  .submit-error.show{ display:block; }
 
-  /* ---------- Confirmation ticket ---------- */
   .ticket-wrap{ display:flex; justify-content:center; padding:30px 14px 60px; }
   .ticket{
     position:relative; width:100%; max-width:420px;
@@ -323,14 +323,11 @@
   }
   .ticket::before, .ticket::after{
     content:""; position:absolute; width:22px; height:22px; border-radius:50%;
-    background:var(--paper); border:1px solid var(--line);
-    top:calc(100% - 190px);
+    background:var(--paper); border:1px solid var(--line); top:calc(100% - 190px);
   }
   .ticket::before{ left:-11px; }
   .ticket::after{ right:-11px; }
-  .ticket-perf{
-    border-top:1px dashed var(--line); margin: 18px 0; position:relative;
-  }
+  .ticket-perf{ border-top:1px dashed var(--line); margin: 18px 0; position:relative; }
   .ticket-eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:0.7rem; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.1em; }
   .ticket h2{ font-size:1.3rem; margin-top:4px; }
   .order-id{ font-family:'IBM Plex Mono',monospace; font-size:0.95rem; color:var(--teal-dark); margin-top:2px; }
@@ -340,11 +337,14 @@
     display:inline-flex; align-items:center; gap:8px;
     border:2px solid var(--success); color:var(--success);
     border-radius:8px; padding:7px 14px; font-weight:700; font-size:0.85rem;
-    text-transform:uppercase; letter-spacing:0.05em; font-family:'IBM Plex Mono',monospace;
+    font-family:'IBM Plex Mono',monospace; letter-spacing:0.02em;
     transform:rotate(-2deg); margin-top:14px;
   }
   .status-stamp.preparing{ border-color:var(--orange); color:var(--orange-dark); }
-  .status-stamp.ready{ border-color:var(--teal); color:var(--teal-dark); background:rgba(47,111,98,0.06); }
+  .status-stamp.ready{
+    border-color:var(--teal); color:var(--teal-dark); background:rgba(47,111,98,0.08);
+    transform:rotate(-2deg) scale(1.04);
+  }
   .status-stamp .dot{ width:8px; height:8px; border-radius:50%; background:currentColor; animation:pulse 1.6s infinite; }
   @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
   .pay-line{ margin-top:16px; font-size:0.82rem; color:var(--ink-soft); }
@@ -357,24 +357,19 @@
     position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px);
     background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px;
     font-size:0.84rem; opacity:0; pointer-events:none; transition:all 0.2s ease; z-index:80;
+    max-width:88vw; text-align:center;
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
-  @media (prefers-reduced-motion: reduce){
-    *{ animation:none !important; transition:none !important; }
-  }
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
 
-  /* ---------- Tablet / Desktop ---------- */
   @media (min-width: 720px){
     .drinks-grid{ grid-template-columns: repeat(3, 1fr); }
     .mobile-cart-bar{ display:none; }
     body{ padding-bottom:0; }
   }
   @media (min-width: 980px){
-    main{
-      grid-template-columns: 1fr 340px;
-      align-items:start;
-    }
+    main{ grid-template-columns: 1fr 340px; align-items:start; }
     .drinks-grid{ grid-template-columns: repeat(2, 1fr); }
     .cart-pill{ display:none; }
     .sidebar-cart{
@@ -387,9 +382,7 @@
     .sidebar-cart .drawer-body{ padding:0; flex:1; overflow-y:auto; }
     .sidebar-cart .drawer-foot{ background:none; border-top:1px dashed var(--line); padding:14px 0 0; margin-top:10px; }
   }
-  @media (min-width: 1180px){
-    .drinks-grid{ grid-template-columns: repeat(3, 1fr); }
-  }
+  @media (min-width: 1180px){ .drinks-grid{ grid-template-columns: repeat(3, 1fr); } }
 </style>
 </head>
 <body>
@@ -402,81 +395,83 @@
       <div class="brand-mark" id="brandMark">CC</div>
       <div class="brand-text">
         <div class="store-name" id="storeNameHeader">Chicken Cheek</div>
-        <div class="tagline" id="storeTagline">Pre-order · pickup only</div>
+        <div class="tagline" id="storeTagline">สั่งล่วงหน้า · รับที่ร้านเท่านั้น</div>
       </div>
     </div>
-    <button class="cart-pill" id="cartPillBtn" aria-label="Open cart">
-      Cart <span class="count mono" id="cartCountPill">0</span>
+    <button class="cart-pill" id="cartPillBtn" aria-label="เปิดตะกร้า">
+      ตะกร้า <span class="count mono" id="cartCountPill">0</span>
     </button>
   </div>
 </header>
 
+<div class="resume-banner" id="resumeBanner">
+  <div class="resume-banner-inner">
+    <div class="resume-banner-text">มีออเดอร์ที่กำลังดำเนินการอยู่ <b id="resumeOrderId">#—</b></div>
+    <button class="view" id="resumeViewBtn" type="button">ดูสถานะ</button>
+    <button class="dismiss" id="resumeDismissBtn" type="button" aria-label="ปิด">✕</button>
+  </div>
+</div>
+
 <div class="hero">
-  <div class="eyebrow">Pre-order &amp; pickup</div>
+  <div class="eyebrow">สั่งล่วงหน้า &amp; รับที่ร้าน</div>
   <h1 id="storeNameHero">Chicken Cheek</h1>
-  <p>เลือกเมนู, เขียนโน๊ตให้เชฟ, เลือกเวลารับอาหาร, จายเงินและรับอาหารที่ร้าน</p>
+  <p>เลือกเมนูที่ต้องการ ใส่ตะกร้า เขียนโน้ตถึงเชฟได้ เลือกเวลาที่จะมารับอาหาร แล้วจ่ายเงินสดตอนมารับที่ร้าน</p>
 </div>
 
 <main>
   <div>
-    <!-- FOOD (single menu item — template) -->
     <section class="menu-section" id="foodSection">
       <div class="section-head">
-        <h2>Food/อาหาร</h2>
-        <span class="hint">มีเมนู 1 รายการ</span>
+        <h2>อาหาร</h2>
+        <span class="hint">มีเมนู 1 รายการวันนี้</span>
       </div>
       <div id="foodContainer"></div>
     </section>
 
-    <!-- DRINKS (multiple items — template) -->
     <section class="menu-section" style="margin-top:32px;" id="drinksSection">
       <div class="section-head">
-        <h2>Drinks/เครื่องดื่ม</h2>
-        <span class="hint" id="drinksCountHint">0 options</span>
+        <h2>เครื่องดื่ม</h2>
+        <span class="hint" id="drinksCountHint">0 ตัวเลือก</span>
       </div>
       <div class="drinks-grid" id="drinksContainer"></div>
     </section>
   </div>
 
-  <!-- Desktop sidebar cart -->
   <aside class="sidebar-cart" id="sidebarCart">
-    <h2>รายการของคุณ order</h2>
+    <h2>รายการของคุณ</h2>
     <div class="drawer-body" id="sidebarCartBody"></div>
     <div class="drawer-foot" id="sidebarCartFoot">
-      <div class="total-row"><span>ทั้งหมด</span><span class="mono" id="sidebarTotal">$0.00</span></div>
-      <button class="checkout-btn" id="sidebarCheckoutBtn" disabled>เลือกเวลาที่จะรับอาหาร</button>
+      <div class="total-row"><span>รวมทั้งหมด</span><span class="mono" id="sidebarTotal">฿0.00</span></div>
+      <button class="checkout-btn" id="sidebarCheckoutBtn" disabled>เลือกเวลารับอาหาร</button>
     </div>
   </aside>
 </main>
 
-<!-- Mobile cart drawer -->
 <div class="overlay" id="drawerOverlay"></div>
-<div class="drawer" id="cartDrawer" role="dialog" aria-label="Cart">
+<div class="drawer" id="cartDrawer" role="dialog" aria-label="ตะกร้า">
   <div class="drawer-head">
     <h2>รายการของคุณ</h2>
-    <button class="icon-btn" id="closeDrawerBtn" aria-label="Close cart">✕</button>
+    <button class="icon-btn" id="closeDrawerBtn" aria-label="ปิดตะกร้า">✕</button>
   </div>
   <div class="drawer-body" id="drawerCartBody"></div>
   <div class="drawer-foot">
-    <div class="total-row"><span>Total</span><span class="mono" id="drawerTotal">$0.00</span></div>
-    <button class="checkout-btn" id="drawerCheckoutBtn" disabled>เลือกเวลาที่จะรับอาหาร</button>
+    <div class="total-row"><span>รวมทั้งหมด</span><span class="mono" id="drawerTotal">฿0.00</span></div>
+    <button class="checkout-btn" id="drawerCheckoutBtn" disabled>เลือกเวลารับอาหาร</button>
   </div>
 </div>
 
-<!-- Mobile sticky bar -->
 <div class="mobile-cart-bar" id="mobileCartBar">
   <div>
     <div class="label" id="mobileItemCount">0 รายการ</div>
-    <div class="amt mono" id="mobileTotal">$0.00</div>
+    <div class="amt mono" id="mobileTotal">฿0.00</div>
   </div>
   <button id="mobileCartBtn">ดูตะกร้า</button>
 </div>
 
-<!-- Checkout modal -->
 <div class="modal-overlay" id="checkoutOverlay">
   <div class="modal">
-    <h2>Pickup details</h2>
-    <div class="sub">เลือกเวลาที่จะรับอาหาร</div>
+    <h2>รายละเอียดการรับอาหาร</h2>
+    <div class="sub">เลือกเวลาที่คุณจะมารับอาหาร</div>
 
     <div class="field-group">
       <label for="pickupTimeSelect">เวลารับอาหาร</label>
@@ -485,26 +480,26 @@
 
     <div class="field-group">
       <label for="customerName">ชื่อผู้สั่ง</label>
-      <input type="text" id="customerName" placeholder="e.g. Alex" autocomplete="name">
+      <input type="text" id="customerName" placeholder="เช่น สมชาย" autocomplete="name">
     </div>
 
     <div class="order-summary" id="checkoutSummary"></div>
 
     <div class="pay-note">
-      💵 <span>Pay <strong id="payAmountNote">$0.00</strong> in person when you pick up your order. No online payment needed.</span>
+      💵 <span>จ่าย <strong id="payAmountNote">฿0.00</strong> เป็นเงินสดตอนมารับอาหารที่ร้าน ไม่ต้องจ่ายออนไลน์</span>
     </div>
 
-    <button class="confirm-btn" id="confirmOrderBtn">Confirm &amp; submit order</button>
-    <button class="back-link" id="backToCartBtn">← Back to cart</button>
+    <button class="confirm-btn" id="confirmOrderBtn">ยืนยันและส่งคำสั่งซื้อ</button>
+    <div class="submit-error" id="submitError"></div>
+    <button class="back-link" id="backToCartBtn">← กลับไปที่ตะกร้า</button>
   </div>
 </div>
 
-<!-- Confirmation view -->
 <div class="modal-overlay" id="confirmationOverlay">
   <div class="modal" style="border-radius:18px; border-bottom:1px solid var(--line);">
     <div class="ticket-wrap" style="padding:6px 0 10px;">
       <div class="ticket">
-        <div class="ticket-eyebrow">Order confirmed</div>
+        <div class="ticket-eyebrow">ยืนยันคำสั่งซื้อแล้ว</div>
         <h2 id="ticketStoreName">Chicken Cheek</h2>
         <div class="order-id mono" id="ticketOrderId">#—</div>
 
@@ -514,10 +509,10 @@
 
         <div class="ticket-rows" id="ticketItems"></div>
 
-        <div class="pay-line">Pickup time: <strong id="ticketPickupTime">—</strong><br>
-        Name: <strong id="ticketCustomerName">—</strong></div>
+        <div class="pay-line">เวลารับอาหาร: <strong id="ticketPickupTime">—</strong><br>
+        ชื่อ: <strong id="ticketCustomerName">—</strong></div>
 
-        <button class="new-order-btn" id="newOrderBtn">Place another order</button>
+        <button class="new-order-btn" id="newOrderBtn">สั่งใหม่อีกครั้ง</button>
       </div>
     </div>
   </div>
@@ -527,42 +522,41 @@
 
 <script type="module">
   // ============================================================
-  // 1. CONFIG — edit everything here
+  // 1. CONFIG
   // ============================================================
   const CONFIG = {
     storeName: "Chicken Cheek",
-    tagline: "Pre-order · pickup only",
-    brandInitials: "SN",
+    tagline: "สั่งล่วงหน้า · รับที่ร้านเท่านั้น",
+    brandInitials: "CC",
 
-    // Single food item template. This is the one dish on the menu.
-    // Add a "notes" prompt so people can tell the chef how to cook it.
     food: {
       id: "food-1",
       name: "หมี่ไก่ฉีก",
       description: "Test",
       price: 39.00,
-      notesPlaceholder: "ไม่ผัก, ไม่เอาไก่, etc"
+      notesPlaceholder: "ไม่เอาผัก, ไม่เอาไก่ ฯลฯ"
     },
 
-    // Drinks list template — add/remove/edit entries freely.
     drinks: [
-      { id: "drink-1", name: "โค้ก", description: "ยาแก้ไอ", price: 10.00, tag: "500ml" },
-      { id: "drink-2", name: "เป็ปซี่", description: "รอก่อนค่อยดื่ม", price: 10.00, tag: "500ml" },
-      { id: "drink-3", name: "แฟนต้าเขียว", description: "น้ำเขียว", price: 10.00, tag: "500ml" },
-      { id: "drink-4", name: "แฟนต้าแดง", description: "น้ำแดง", price: 10.00, tag: "500ml" },
-      { id: "drink-5", name: "สไปร์ท", description: "Sprite", price: 10.00, tag: "500ml" },
-      { id: "drink-6", name: "แฟนต้าองุ่น", description: "Test", price: 10.00, tag: "500ml" },
-      { id: "drink-7", name: "แฟนต้าลิ้นจี่", description: "Test", price: 10.00, tag: "500ml" }
+      { id: "drink-1", name: "โค้ก", description: "", price: 10.00, tag: "500ml" },
+      { id: "drink-2", name: "เป็ปซี่", description: "", price: 10.00, tag: "500ml" },
+      { id: "drink-3", name: "แฟนต้าเขียว", description: "", price: 10.00, tag: "500ml" },
+      { id: "drink-4", name: "แฟนต้าแดง", description: "", price: 10.00, tag: "500ml" },
+      { id: "drink-5", name: "สไปร์ท", description: "", price: 10.00, tag: "500ml" },
+      { id: "drink-6", name: "แฟนต้าองุ่น", description: "", price: 10.00, tag: "500ml" },
+      { id: "drink-7", name: "แฟนต้าลิ้นจี่", description: "", price: 10.00, tag: "500ml" }
     ],
 
-    // Pickup window: times are generated automatically between start/end.
     pickup: {
-      start: "11:00",   // 24h "HH:MM"
+      start: "11:00",
       end: "14:00",
       intervalMinutes: 15
     },
 
-    currency: "$"
+    currency: "฿",
+
+    // How long to wait for Firebase to respond before showing an error (ms)
+    submitTimeoutMs: 12000
   };
 
   // ============================================================
@@ -570,7 +564,7 @@
   // ============================================================
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
-    getFirestore, collection, addDoc, doc, onSnapshot, serverTimestamp
+    getFirestore, collection, addDoc, doc, getDoc, onSnapshot, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -590,30 +584,29 @@
   // ============================================================
   // 3. STATE
   // ============================================================
-  let cart = loadCart(); // { [itemId]: { id, name, price, qty, notes, category } }
+  let cart = loadCart();
   let activeOrderUnsub = null;
+  let titleFlashTimer = null;
+  const ORIGINAL_TITLE = CONFIG.storeName + " — สั่งล่วงหน้า";
 
   function loadCart(){
-    try{
-      const raw = localStorage.getItem("preorder_cart");
-      return raw ? JSON.parse(raw) : {};
-    }catch(e){ return {}; }
+    try{ const raw = localStorage.getItem("preorder_cart"); return raw ? JSON.parse(raw) : {}; }
+    catch(e){ return {}; }
   }
-  function saveCart(){
-    localStorage.setItem("preorder_cart", JSON.stringify(cart));
+  function saveCart(){ localStorage.setItem("preorder_cart", JSON.stringify(cart)); }
+
+  function saveLastOrder(order){
+    try{ localStorage.setItem("preorder_lastOrder", JSON.stringify(order)); }catch(e){}
+  }
+  function loadLastOrder(){
+    try{ const raw = localStorage.getItem("preorder_lastOrder"); return raw ? JSON.parse(raw) : null; }
+    catch(e){ return null; }
   }
 
-  function fmt(n){ return CONFIG.currency + n.toFixed(2); }
-
-  function cartItemsArray(){
-    return Object.values(cart).filter(i => i.qty > 0);
-  }
-  function cartTotal(){
-    return cartItemsArray().reduce((sum, i) => sum + i.price * i.qty, 0);
-  }
-  function cartCount(){
-    return cartItemsArray().reduce((sum, i) => sum + i.qty, 0);
-  }
+  function fmt(n){ return CONFIG.currency + Number(n).toFixed(2); }
+  function cartItemsArray(){ return Object.values(cart).filter(i => i.qty > 0); }
+  function cartTotal(){ return cartItemsArray().reduce((sum, i) => sum + i.price * i.qty, 0); }
+  function cartCount(){ return cartItemsArray().reduce((sum, i) => sum + i.qty, 0); }
 
   // ============================================================
   // 4. RENDER: header / brand
@@ -623,7 +616,7 @@
   document.getElementById("storeTagline").textContent = CONFIG.tagline;
   document.getElementById("brandMark").textContent = CONFIG.brandInitials;
   document.getElementById("ticketStoreName").textContent = CONFIG.storeName;
-  document.title = CONFIG.storeName + " — Pre-Order";
+  document.title = ORIGINAL_TITLE;
 
   // ============================================================
   // 5. RENDER: food item
@@ -636,7 +629,7 @@
 
     foodContainer.innerHTML = `
       <div class="food-card">
-        <div class="food-thumb">photo<br>placeholder</div>
+        <div class="food-thumb">รูปภาพ<br>(ที่ว่าง)</div>
         <div style="min-width:0;">
           <div class="food-title-row">
             <div>
@@ -647,16 +640,16 @@
           </div>
           <div class="qty-row">
             <div class="stepper">
-              <button type="button" data-action="dec" aria-label="Decrease quantity">−</button>
+              <button type="button" data-action="dec" aria-label="ลดจำนวน">−</button>
               <span class="qty-val mono" id="foodQtyVal">${qty}</span>
-              <button type="button" data-action="inc" aria-label="Increase quantity">+</button>
+              <button type="button" data-action="inc" aria-label="เพิ่มจำนวน">+</button>
             </div>
           </div>
           <div class="notes-field">
-            <label for="foodNotes">Notes for the chef (optional)</label>
+            <label for="foodNotes">โน้ตถึงเชฟ (ถ้ามี)</label>
             <textarea id="foodNotes" placeholder="${escapeHtml(f.notesPlaceholder)}">${escapeHtml(existing?.notes || "")}</textarea>
           </div>
-          <button class="add-btn" id="foodAddBtn" type="button">+ Add to order</button>
+          <button class="add-btn" id="foodAddBtn" type="button">+ เพิ่มลงตะกร้า</button>
         </div>
       </div>
     `;
@@ -673,14 +666,11 @@
     };
     document.getElementById("foodAddBtn").onclick = () => {
       const notes = document.getElementById("foodNotes").value.trim();
-      if (localQty <= 0){
-        showToast("Choose a quantity first");
-        return;
-      }
+      if (localQty <= 0){ showToast("กรุณาเลือกจำนวนก่อน"); return; }
       cart[f.id] = { id: f.id, name: f.name, price: f.price, qty: localQty, notes, category: "Food" };
       saveCart();
       renderAll();
-      showToast(f.name + " added to order");
+      showToast(f.name + " ถูกเพิ่มลงตะกร้าแล้ว");
     };
   }
 
@@ -689,7 +679,7 @@
   // ============================================================
   const drinksContainer = document.getElementById("drinksContainer");
   function renderDrinks(){
-    document.getElementById("drinksCountHint").textContent = CONFIG.drinks.length + " option" + (CONFIG.drinks.length === 1 ? "" : "s");
+    document.getElementById("drinksCountHint").textContent = CONFIG.drinks.length + " ตัวเลือก";
     drinksContainer.innerHTML = CONFIG.drinks.map(d => {
       const qty = cart[d.id]?.qty || 0;
       return `
@@ -699,9 +689,9 @@
           <div class="drink-desc">${escapeHtml(d.description || "")}</div>
           <div class="drink-bottom">
             <span class="drink-price mono">${fmt(d.price)}</span>
-            <button class="drink-add" type="button" data-id="${d.id}" aria-label="Add ${escapeHtml(d.name)}">+</button>
+            <button class="drink-add" type="button" data-id="${d.id}" aria-label="เพิ่ม ${escapeHtml(d.name)}">+</button>
           </div>
-          ${qty > 0 ? `<div style="font-size:0.72rem;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;">${qty} in order</div>` : ""}
+          ${qty > 0 ? `<div style="font-size:0.72rem;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;">อยู่ในตะกร้า ${qty}</div>` : ""}
         </div>
       `;
     }).join("");
@@ -716,18 +706,18 @@
         };
         saveCart();
         renderAll();
-        showToast(d.name + " added");
+        showToast(d.name + " ถูกเพิ่มแล้ว");
       };
     });
   }
 
   // ============================================================
-  // 7. RENDER: cart (drawer + sidebar share the same markup)
+  // 7. RENDER: cart
   // ============================================================
   function cartBodyHtml(){
     const items = cartItemsArray();
     if (items.length === 0){
-      return `<div class="empty-cart">Your order is empty.<br>Add items from the menu to get started.</div>`;
+      return `<div class="empty-cart">ยังไม่มีรายการในตะกร้า<br>เลือกเมนูด้านบนเพื่อเริ่มสั่ง</div>`;
     }
     return items.map(i => `
       <div class="cart-item">
@@ -742,7 +732,7 @@
             <span class="qty-val mono">${i.qty}</span>
             <button type="button" data-id="${i.id}" data-action="inc">+</button>
           </div>
-          <button class="remove-link" data-id="${i.id}" data-action="remove" type="button">Remove</button>
+          <button class="remove-link" data-id="${i.id}" data-action="remove" type="button">ลบ</button>
         </div>
       </div>
     `).join("");
@@ -769,35 +759,28 @@
     const total = cartTotal();
     const count = cartCount();
 
-    // Drawer (mobile)
     const drawerBody = document.getElementById("drawerCartBody");
     drawerBody.innerHTML = html;
     wireCartBody(drawerBody);
     document.getElementById("drawerTotal").textContent = fmt(total);
     document.getElementById("drawerCheckoutBtn").disabled = count === 0;
 
-    // Sidebar (desktop)
     const sidebarBody = document.getElementById("sidebarCartBody");
     sidebarBody.innerHTML = html;
     wireCartBody(sidebarBody);
     document.getElementById("sidebarTotal").textContent = fmt(total);
     document.getElementById("sidebarCheckoutBtn").disabled = count === 0;
 
-    // Pills / mobile bar
     document.getElementById("cartCountPill").textContent = count;
-    document.getElementById("mobileItemCount").textContent = count + (count === 1 ? " item" : " items");
+    document.getElementById("mobileItemCount").textContent = count + " รายการ";
     document.getElementById("mobileTotal").textContent = fmt(total);
     document.getElementById("mobileCartBar").classList.toggle("show", count > 0);
   }
 
-  function renderAll(){
-    renderFood();
-    renderDrinks();
-    renderCart();
-  }
+  function renderAll(){ renderFood(); renderDrinks(); renderCart(); }
 
   // ============================================================
-  // 8. Cart drawer open/close (mobile)
+  // 8. Cart drawer open/close
   // ============================================================
   const drawerOverlay = document.getElementById("drawerOverlay");
   const cartDrawer = document.getElementById("cartDrawer");
@@ -813,6 +796,7 @@
   // ============================================================
   const checkoutOverlay = document.getElementById("checkoutOverlay");
   const pickupSelect = document.getElementById("pickupTimeSelect");
+  const submitErrorEl = document.getElementById("submitError");
 
   function buildPickupTimes(){
     const { start, end, intervalMinutes } = CONFIG.pickup;
@@ -823,8 +807,7 @@
     const options = [];
     while (cur <= last){
       const h = Math.floor(cur / 60), m = cur % 60;
-      const label = to12h(h, m);
-      options.push({ value: `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`, label });
+      options.push({ value: `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`, label: to12h(h, m) });
       cur += intervalMinutes;
     }
     return options;
@@ -837,14 +820,15 @@
 
   function openCheckout(){
     if (cartCount() === 0) return;
-    pickupSelect.innerHTML = buildPickupTimes()
-      .map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+    submitErrorEl.classList.remove("show");
+    submitErrorEl.textContent = "";
+    pickupSelect.innerHTML = buildPickupTimes().map(o => `<option value="${o.value}">${o.label}</option>`).join("");
 
     const items = cartItemsArray();
     const total = cartTotal();
     document.getElementById("checkoutSummary").innerHTML = items.map(i => `
       <div class="row"><span>${i.qty} × ${escapeHtml(i.name)}</span><span class="mono">${fmt(i.price * i.qty)}</span></div>
-    `).join("") + `<div class="row total"><span>Total</span><span class="mono">${fmt(total)}</span></div>`;
+    `).join("") + `<div class="row total"><span>รวมทั้งหมด</span><span class="mono">${fmt(total)}</span></div>`;
     document.getElementById("payAmountNote").textContent = fmt(total);
 
     closeDrawer();
@@ -858,8 +842,30 @@
   checkoutOverlay.addEventListener("click", (e) => { if (e.target === checkoutOverlay) closeCheckout(); });
 
   // ============================================================
-  // 10. Submit order -> Firestore
+  // 10. Submit order -> Firestore (with timeout + clear error messages)
   // ============================================================
+  function withTimeout(promise, ms, timeoutMessage){
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(timeoutMessage)), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+  }
+
+  function friendlyErrorMessage(err){
+    const code = err && err.code ? String(err.code) : "";
+    if (code.includes("permission-denied")){
+      return "ส่งไม่สำเร็จ: Firestore ปฏิเสธการเขียนข้อมูล (permission-denied) — ไปที่ Firebase Console > Firestore Database > Rules แล้วตั้งค่าให้อนุญาตการเขียนข้อมูล (ดูตัวอย่าง Rules ท้ายไฟล์นี้)";
+    }
+    if (code.includes("unavailable") || code.includes("failed-precondition") || code === "not-found" || code.includes("NOT_FOUND")){
+      return "ส่งไม่สำเร็จ: เชื่อมต่อฐานข้อมูลไม่ได้ — ตรวจสอบว่าสร้าง Firestore Database ในโปรเจกต์นี้แล้ว (Firebase Console > Build > Firestore Database > Create database)";
+    }
+    if (err && err.message && err.message.includes("หมดเวลา")){
+      return err.message;
+    }
+    return "ส่งคำสั่งซื้อไม่สำเร็จ (" + (err?.message || "unknown error") + ") — ลองใหม่อีกครั้ง หรือตรวจสอบอินเทอร์เน็ต";
+  }
+
   const confirmBtn = document.getElementById("confirmOrderBtn");
   confirmBtn.onclick = async () => {
     const items = cartItemsArray();
@@ -867,14 +873,16 @@
 
     const pickupTime = pickupSelect.options[pickupSelect.selectedIndex]?.textContent || "";
     const pickupValue = pickupSelect.value;
-    const customerName = document.getElementById("customerName").value.trim() || "Guest";
+    const customerName = document.getElementById("customerName").value.trim() || "ลูกค้า";
     const total = cartTotal();
 
     confirmBtn.disabled = true;
-    confirmBtn.textContent = "Submitting…";
+    confirmBtn.textContent = "กำลังส่งคำสั่งซื้อ…";
+    submitErrorEl.classList.remove("show");
+    submitErrorEl.textContent = "";
 
     try{
-      const docRef = await addDoc(ordersCol, {
+      const writePromise = addDoc(ordersCol, {
         storeName: CONFIG.storeName,
         customerName,
         items: items.map(i => ({
@@ -888,61 +896,128 @@
         createdAt: serverTimestamp()
       });
 
-      showConfirmation(docRef.id, items, total, pickupTime, customerName);
+      const docRef = await withTimeout(
+        writePromise,
+        CONFIG.submitTimeoutMs,
+        "หมดเวลาเชื่อมต่อ Firebase — ตรวจสอบอินเทอร์เน็ต หรือว่าตั้งค่า Firestore Database ในโปรเจกต์แล้วหรือยัง"
+      );
 
-      // Clear cart after successful submit
+      const orderRecord = {
+        id: docRef.id, storeName: CONFIG.storeName, customerName,
+        items: items.map(i => ({ ...i })), total, pickupTime, pickupValue,
+        savedAt: Date.now()
+      };
+      saveLastOrder(orderRecord);
+      showConfirmation(orderRecord);
+      updateResumeBanner();
+
       cart = {};
       saveCart();
       renderAll();
       closeCheckout();
     }catch(err){
-      console.error(err);
-      showToast("Couldn't submit order — check your connection and try again");
+      console.error("[preorder] submit failed:", err);
+      submitErrorEl.textContent = friendlyErrorMessage(err);
+      submitErrorEl.classList.add("show");
+      showToast("ส่งคำสั่งซื้อไม่สำเร็จ ดูรายละเอียดด้านล่างปุ่ม");
     }finally{
       confirmBtn.disabled = false;
-      confirmBtn.textContent = "Confirm & submit order";
+      confirmBtn.textContent = "ยืนยันและส่งคำสั่งซื้อ";
     }
   };
 
   // ============================================================
-  // 11. Confirmation ticket + realtime status
+  // 11. Confirmation ticket + realtime status tracking
   // ============================================================
   const confirmationOverlay = document.getElementById("confirmationOverlay");
 
-  function showConfirmation(orderId, items, total, pickupTime, customerName){
-    document.getElementById("ticketOrderId").textContent = "#" + orderId.slice(-6).toUpperCase();
-    document.getElementById("ticketPickupTime").textContent = pickupTime;
-    document.getElementById("ticketCustomerName").textContent = customerName;
-    document.getElementById("ticketItems").innerHTML = items.map(i => `
+  function showConfirmation(order){
+    document.getElementById("ticketOrderId").textContent = "#" + order.id.slice(-6).toUpperCase();
+    document.getElementById("ticketPickupTime").textContent = order.pickupTime;
+    document.getElementById("ticketCustomerName").textContent = order.customerName;
+    document.getElementById("ticketItems").innerHTML = order.items.map(i => `
       <div class="row"><span>${i.qty} × ${escapeHtml(i.name)}</span><span class="mono">${fmt(i.price * i.qty)}</span></div>
-    `).join("") + `<div class="row total"><span>Pay in person</span><span class="mono">${fmt(total)}</span></div>`;
+    `).join("") + `<div class="row total"><span>จ่ายเงินสดที่ร้าน</span><span class="mono">${fmt(order.total)}</span></div>`;
 
     renderStatusStamp("pending");
     confirmationOverlay.classList.add("open");
+    subscribeToOrder(order.id);
+  }
 
-    // Live status tracking from the admin site
+  function subscribeToOrder(orderId){
     if (activeOrderUnsub) activeOrderUnsub();
     activeOrderUnsub = onSnapshot(doc(db, "orders", orderId), (snap) => {
       const data = snap.data();
-      if (data?.status) renderStatusStamp(data.status);
+      if (data?.status){
+        renderStatusStamp(data.status);
+        if (data.status === "ready" || data.status === "completed"){
+          flashTitleWhenHidden(data.status === "ready" ? "🔔 อาหารพร้อมแล้ว!" : "✅ ออเดอร์เสร็จสิ้น");
+        }
+      }
+    }, (err) => {
+      console.error("[preorder] status listener error:", err);
     });
   }
 
   function renderStatusStamp(status){
-    const labels = { pending: "Pending", preparing: "Preparing", ready: "Ready for pickup", completed: "Completed" };
+    const labels = { pending: "รอดำเนินการ", preparing: "กำลังเตรียมอาหาร", ready: "พร้อมรับแล้ว! 🎉", completed: "รับอาหารเรียบร้อย" };
     const cls = { pending: "", preparing: "preparing", ready: "ready", completed: "ready" };
     document.getElementById("ticketStatusWrap").innerHTML = `
       <div class="status-stamp ${cls[status] || ""}"><span class="dot"></span>${labels[status] || status}</div>
     `;
   }
 
+  function flashTitleWhenHidden(message){
+    if (!document.hidden) return;
+    clearInterval(titleFlashTimer);
+    let showAlt = true;
+    titleFlashTimer = setInterval(() => {
+      document.title = showAlt ? message : ORIGINAL_TITLE;
+      showAlt = !showAlt;
+    }, 1200);
+    document.addEventListener("visibilitychange", function stop(){
+      if (!document.hidden){
+        clearInterval(titleFlashTimer);
+        document.title = ORIGINAL_TITLE;
+        document.removeEventListener("visibilitychange", stop);
+      }
+    });
+  }
+
   document.getElementById("newOrderBtn").onclick = () => {
     confirmationOverlay.classList.remove("open");
     if (activeOrderUnsub) { activeOrderUnsub(); activeOrderUnsub = null; }
+    clearInterval(titleFlashTimer);
+    document.title = ORIGINAL_TITLE;
   };
 
   // ============================================================
-  // 12. Helpers
+  // 12. Resume last order banner (per-device tracking by order id)
+  // ============================================================
+  const resumeBanner = document.getElementById("resumeBanner");
+  function updateResumeBanner(){
+    const last = loadLastOrder();
+    const dismissed = sessionStorage.getItem("preorder_bannerDismissed") === last?.id;
+    if (last && !dismissed){
+      document.getElementById("resumeOrderId").textContent = "#" + last.id.slice(-6).toUpperCase();
+      resumeBanner.classList.add("show");
+    }else{
+      resumeBanner.classList.remove("show");
+    }
+  }
+  document.getElementById("resumeViewBtn").onclick = () => {
+    const last = loadLastOrder();
+    if (!last) return;
+    showConfirmation(last);
+  };
+  document.getElementById("resumeDismissBtn").onclick = () => {
+    const last = loadLastOrder();
+    if (last) sessionStorage.setItem("preorder_bannerDismissed", last.id);
+    resumeBanner.classList.remove("show");
+  };
+
+  // ============================================================
+  // 13. Helpers
   // ============================================================
   function escapeHtml(str){
     return String(str ?? "").replace(/[&<>"']/g, s => ({
@@ -956,13 +1031,14 @@
     t.textContent = msg;
     t.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
   }
 
   // ============================================================
-  // 13. Init
+  // 14. Init
   // ============================================================
   renderAll();
+  updateResumeBanner();
 </script>
 </body>
 </html>
