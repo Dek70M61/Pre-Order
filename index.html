@@ -401,7 +401,7 @@
     <div class="brand">
       <div class="brand-mark" id="brandMark">SN</div>
       <div class="brand-text">
-        <div class="store-name" id="storeNameHeader">Store Name</div>
+        <div class="store-name" id="storeNameHeader">Chicken Cheek</div>
         <div class="tagline" id="storeTagline">Pre-order · pickup only</div>
       </div>
     </div>
@@ -414,7 +414,7 @@
 <div class="hero">
   <div class="eyebrow">Pre-order &amp; pickup</div>
   <h1 id="storeNameHero">Store Name</h1>
-  <p>Pick what you want, add any notes for the chef, choose a pickup time, and pay in person when you collect your order.</p>
+  <p>เลือกเมนู, เขียนโน๊ตให้เชฟ, เลือกเวลารับอาหาร, จายเงินและรับอาหารที่ร้าน</p>
 </div>
 
 <main>
@@ -422,8 +422,8 @@
     <!-- FOOD (single menu item — template) -->
     <section class="menu-section" id="foodSection">
       <div class="section-head">
-        <h2>Food</h2>
-        <span class="hint">1 item on the menu today</span>
+        <h2>Food/อาหาร</h2>
+        <span class="hint">มีเมนู 1 รายการ</span>
       </div>
       <div id="foodContainer"></div>
     </section>
@@ -431,7 +431,7 @@
     <!-- DRINKS (multiple items — template) -->
     <section class="menu-section" style="margin-top:32px;" id="drinksSection">
       <div class="section-head">
-        <h2>Drinks</h2>
+        <h2>Drinks/เครื่องดื่ม</h2>
         <span class="hint" id="drinksCountHint">0 options</span>
       </div>
       <div class="drinks-grid" id="drinksContainer"></div>
@@ -440,11 +440,11 @@
 
   <!-- Desktop sidebar cart -->
   <aside class="sidebar-cart" id="sidebarCart">
-    <h2>Your order</h2>
+    <h2>รายการของคุณ order</h2>
     <div class="drawer-body" id="sidebarCartBody"></div>
     <div class="drawer-foot" id="sidebarCartFoot">
-      <div class="total-row"><span>Total</span><span class="mono" id="sidebarTotal">$0.00</span></div>
-      <button class="checkout-btn" id="sidebarCheckoutBtn" disabled>Choose pickup time</button>
+      <div class="total-row"><span>ทั้งหมด</span><span class="mono" id="sidebarTotal">$0.00</span></div>
+      <button class="checkout-btn" id="sidebarCheckoutBtn" disabled>เลือกเวลาที่จะรับอาหาร</button>
     </div>
   </aside>
 </main>
@@ -453,20 +453,20 @@
 <div class="overlay" id="drawerOverlay"></div>
 <div class="drawer" id="cartDrawer" role="dialog" aria-label="Cart">
   <div class="drawer-head">
-    <h2>Your order</h2>
+    <h2>รายการของคุณ</h2>
     <button class="icon-btn" id="closeDrawerBtn" aria-label="Close cart">✕</button>
   </div>
   <div class="drawer-body" id="drawerCartBody"></div>
   <div class="drawer-foot">
     <div class="total-row"><span>Total</span><span class="mono" id="drawerTotal">$0.00</span></div>
-    <button class="checkout-btn" id="drawerCheckoutBtn" disabled>Choose pickup time</button>
+    <button class="checkout-btn" id="drawerCheckoutBtn" disabled>เลือกเวลาที่จะรับอาหาร</button>
   </div>
 </div>
 
 <!-- Mobile sticky bar -->
 <div class="mobile-cart-bar" id="mobileCartBar">
   <div>
-    <div class="label" id="mobileItemCount">0 items</div>
+    <div class="label" id="mobileItemCount">0 รายการ</div>
     <div class="amt mono" id="mobileTotal">$0.00</div>
   </div>
   <button id="mobileCartBtn">View cart</button>
@@ -476,15 +476,15 @@
 <div class="modal-overlay" id="checkoutOverlay">
   <div class="modal">
     <h2>Pickup details</h2>
-    <div class="sub">Choose when you'll pick up your order.</div>
+    <div class="sub">เลือกเวลาที่จะรับอาหาร</div>
 
     <div class="field-group">
-      <label for="pickupTimeSelect">Pickup time</label>
+      <label for="pickupTimeSelect">เวลารับอาหาร</label>
       <select id="pickupTimeSelect"></select>
     </div>
 
     <div class="field-group">
-      <label for="customerName">Name for the order</label>
+      <label for="customerName">ชื่อผู้สั่ง</label>
       <input type="text" id="customerName" placeholder="e.g. Alex" autocomplete="name">
     </div>
 
@@ -530,7 +530,7 @@
   // 1. CONFIG — edit everything here
   // ============================================================
   const CONFIG = {
-    storeName: "Store Name",
+    storeName: "Chicken Cheek",
     tagline: "Pre-order · pickup only",
     brandInitials: "SN",
 
@@ -538,18 +538,21 @@
     // Add a "notes" prompt so people can tell the chef how to cook it.
     food: {
       id: "food-1",
-      name: "Menu Item Name",
-      description: "Short description of the dish goes here — ingredients, what makes it good, any dietary notes.",
-      price: 8.00,
-      notesPlaceholder: "e.g. no onions, extra spicy, well done…"
+      name: "หมี่ไก่ฉีก",
+      description: "Test",
+      price: 39.00,
+      notesPlaceholder: "ไม่ผัก, ไม่เอาไก่, etc"
     },
 
     // Drinks list template — add/remove/edit entries freely.
     drinks: [
-      { id: "drink-1", name: "Drink Option 1", description: "Short description", price: 2.00, tag: "12oz" },
-      { id: "drink-2", name: "Drink Option 2", description: "Short description", price: 2.50, tag: "16oz" },
-      { id: "drink-3", name: "Drink Option 3", description: "Short description", price: 2.50, tag: "16oz" },
-      { id: "drink-4", name: "Drink Option 4", description: "Short description", price: 3.00, tag: "20oz" }
+      { id: "drink-1", name: "โค้ก", description: "ยาแก้ไอ", price: 10.00, tag: "500ml" },
+      { id: "drink-2", name: "เป็ปซี่", description: "รอก่อนค่อยดื่ม", price: 10.00, tag: "500ml" },
+      { id: "drink-3", name: "แฟนต้าเขียว", description: "น้ำเขียว", price: 10.00, tag: "500ml" },
+      { id: "drink-4", name: "แฟนต้าแดง", description: "น้ำแดง", price: 10.00, tag: "500ml" },
+      { id: "drink-5", name: "สไปร์ท", description: "Sprite", price: 10.00, tag: "500ml" },
+      { id: "drink-6", name: "แฟนต้าองุ่น", description: "Test", price: 10.00, tag: "500ml" },
+      { id: "drink-7", name: "แฟนต้าลิ้นจี่", description: "Test", price: 10.00, tag: "500ml" }
     ],
 
     // Pickup window: times are generated automatically between start/end.
