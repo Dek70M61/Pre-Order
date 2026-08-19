@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chicken Cheek — Admin</title>
+
+<!-- ============================================================
+  วิธีแก้ไข: ตั้งค่าหลักอยู่ใน CONFIG object ด้านล่างของ <script>
+  ไม่มีระบบล็อกอินในไฟล์นี้ — ใครก็ตามที่มีลิงก์นี้แก้ไข/ลบออเดอร์ได้
+  ถ้าจะใช้จริง ควรเพิ่ม Firebase Auth + Firestore Rules ป้องกันไว้ด้วย
+============================================================= -->
+
+<style>
+  :root{
+    --paper:#F7F5EF; --paper-dim:#EFEBE0; --ink:#1F2A24; --ink-soft:#5B6660;
+    --teal:#2F6F62; --teal-dark:#1F4E44; --orange:#E2703A; --orange-dark:#C25A29;
+    --line:#D8D3C4; --success:#3C8562; --danger:#B4472F; --danger-dark:#8F3823;
+    --radius:14px; --shadow: 0 1px 2px rgba(31,42,36,0.06), 0 8px 24px rgba(31,42,36,0.06);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:'Inter','Noto Sans Thai',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+  }
+  h1,h2,h3{ font-family:'Space Grotesk','Noto Sans Thai',sans-serif; margin:0; letter-spacing:-0.005em; }
+  .mono{ font-family:'IBM Plex Mono','JetBrains Mono',monospace; font-variant-numeric:tabular-nums; }
+  button{ font-family:inherit; cursor:pointer; }
+
+  .bg-grid{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:28px 28px; opacity:0.3;
+  }
+
+  header.site{
+    position:sticky; top:0; z-index:20;
+    background:rgba(247,245,239,0.94); backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  .header-inner{
+    max-width:1180px; margin:0 auto; padding:14px 18px;
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:36px; height:36px; border-radius:10px; background:var(--ink); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px; flex-shrink:0;
+  }
+  .brand-text .store-name{ font-size:1.05rem; font-weight:700; line-height:1.15; }
+  .brand-text .tagline{ font-size:0.7rem; color:var(--ink-soft); }
+  .header-right{ display:flex; align-items:center; gap:14px; }
+  .clock{ font-family:'IBM Plex Mono',monospace; font-size:0.9rem; color:var(--ink-soft); }
+  .conn-dot{ display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--ink-soft); }
+  .conn-dot .dot{ width:8px; height:8px; border-radius:50%; background:var(--success); }
+  .conn-dot.offline .dot{ background:var(--danger); animation:blink 1s infinite; }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .summary-bar{
+    max-width:1180px; margin:0 auto; padding:16px 18px 0;
+    display:flex; gap:10px; flex-wrap:wrap;
+  }
+  .summary-chip{
+    background:#fff; border:1px solid var(--line); border-radius:10px;
+    padding:9px 14px; font-size:0.82rem; display:flex; align-items:center; gap:8px;
+  }
+  .summary-chip .num{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:0.95rem; }
+  .summary-chip.active-chip .num{ color:var(--orange-dark); }
+  .summary-chip.upcoming-chip .num{ color:var(--teal-dark); }
+  .summary-chip.done-chip .num{ color:var(--ink-soft); }
+
+  main{
+    max-width:1180px; margin:0 auto; padding:16px 18px 60px;
+    display:grid; grid-template-columns:1fr; gap:28px;
+  }
+  @media (min-width: 1080px){
+    main{ grid-template-columns: 1fr 380px; align-items:start; }
+  }
+
+  .section-head{
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid var(--line); padding-bottom:8px; margin-bottom:14px;
+  }
+  .section-head h2{ font-size:1.05rem; display:flex; align-items:center; gap:8px; }
+  .section-head .hint{ font-size:0.74rem; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; }
+  .live-tag{
+    display:inline-flex; align-items:center; gap:5px; font-size:0.68rem;
+    color:var(--orange-dark); font-family:'IBM Plex Mono',monospace; text-transform:uppercase; letter-spacing:0.06em;
+  }
+  .live-tag .dot{ width:6px; height:6px; border-radius:50%; background:var(--orange); animation:pulse 1.4s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .empty-state{
+    text-align:center; color:var(--ink-soft); font-size:0.85rem;
+    padding:34px 14px; border:1px dashed var(--line); border-radius:12px; background:#fff;
+  }
+
+  /* ---------- Order card ---------- */
+  .order-card{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px; box-shadow:var(--shadow); margin-bottom:12px;
+    border-left:4px solid var(--line);
+  }
+  .order-card.urgent{ border-left-color:var(--orange); }
+  .order-card.overdue{ border-left-color:var(--danger); }
+  .order-card.pinned{ border-left-color:var(--teal); background:linear-gradient(0deg, rgba(47,111,98,0.05), rgba(47,111,98,0.05)), #fff; }
+  .order-card.status-completed{ opacity:0.62; }
+
+  .order-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .order-id-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .order-id{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:0.85rem; color:var(--ink); }
+  .pin-flag{ font-size:0.9rem; }
+  .countdown{
+    font-family:'IBM Plex Mono',monospace; font-size:0.72rem; font-weight:700;
+    padding:3px 9px; border-radius:999px; white-space:nowrap;
+    background:var(--paper-dim); color:var(--ink-soft);
+  }
+  .countdown.urgent{ background:rgba(226,112,58,0.14); color:var(--orange-dark); }
+  .countdown.overdue{ background:rgba(180,71,47,0.14); color:var(--danger-dark); }
+
+  .order-meta{ display:flex; gap:14px; flex-wrap:wrap; margin-top:6px; font-size:0.8rem; color:var(--ink-soft); }
+  .order-meta b{ color:var(--ink); font-weight:600; }
+  .pickup-time-big{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1rem; color:var(--ink); }
+
+  .order-items{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--line); }
+  .order-item-row{ display:flex; justify-content:space-between; font-size:0.85rem; padding:3px 0; gap:10px; }
+  .order-item-row .qty{ font-family:'IBM Plex Mono',monospace; font-weight:700; color:var(--teal-dark); flex-shrink:0; }
+  .order-item-notes{ font-size:0.76rem; color:var(--ink-soft); font-style:italic; margin-left:22px; }
+  .order-total-row{ display:flex; justify-content:space-between; font-weight:700; font-size:0.92rem; margin-top:8px; padding-top:8px; border-top:1px solid var(--line); }
+
+  .status-row{ display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; }
+  .status-btn{
+    border:1px solid var(--line); background:#fff; border-radius:8px;
+    padding:6px 11px; font-size:0.76rem; font-weight:600; color:var(--ink-soft);
+  }
+  .status-btn.active{ background:var(--ink); color:#fff; border-color:var(--ink); }
+  .status-btn[data-status="ready"].active{ background:var(--teal); border-color:var(--teal); }
+  .status-btn[data-status="completed"].active{ background:var(--success); border-color:var(--success); }
+
+  .action-row{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .action-btn{
+    border:1px solid var(--line); background:var(--paper); border-radius:8px;
+    padding:6px 10px; font-size:0.76rem; color:var(--ink); display:inline-flex; align-items:center; gap:5px;
+  }
+  .action-btn:hover{ background:var(--paper-dim); }
+  .action-btn.pin-on{ background:rgba(47,111,98,0.12); border-color:var(--teal); color:var(--teal-dark); }
+  .action-btn.danger{ color:var(--danger); }
+  .action-btn.danger:hover{ background:rgba(180,71,47,0.08); }
+
+  /* ---------- Edit form ---------- */
+  .edit-panel{
+    margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);
+    display:none;
+  }
+  .edit-panel.open{ display:block; }
+  .edit-field{ margin-bottom:10px; }
+  .edit-field label{ display:block; font-size:0.74rem; color:var(--ink-soft); margin-bottom:4px; }
+  .edit-field input, .edit-field select{
+    width:100%; border:1px solid var(--line); border-radius:8px; padding:8px 10px;
+    font-family:inherit; font-size:0.85rem; background:#fff;
+  }
+  .edit-item-row{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .edit-item-row .name{ flex:1; font-size:0.82rem; min-width:0; }
+  .edit-item-row .stepper{ display:flex; align-items:center; border:1px solid var(--line); border-radius:999px; overflow:hidden; flex-shrink:0; }
+  .edit-item-row .stepper button{ width:26px; height:26px; border:none; background:#fff; font-size:0.95rem; }
+  .edit-item-row .stepper .val{ width:24px; text-align:center; font-family:'IBM Plex Mono',monospace; font-size:0.78rem; }
+  .edit-item-row .note-input{
+    width:100%; margin-top:4px; border:1px solid var(--line); border-radius:6px;
+    padding:5px 8px; font-size:0.76rem; font-family:inherit;
+  }
+  .edit-actions{ display:flex; gap:8px; margin-top:10px; }
+  .save-btn{ background:var(--teal); color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:0.8rem; font-weight:600; }
+  .save-btn:hover{ background:var(--teal-dark); }
+  .cancel-btn{ background:none; border:1px solid var(--line); border-radius:8px; padding:8px 14px; font-size:0.8rem; color:var(--ink-soft); }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar-block{ margin-bottom:28px; }
+  .compact-order{
+    background:#fff; border:1px solid var(--line); border-radius:10px;
+    padding:11px 13px; margin-bottom:8px; font-size:0.8rem;
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+  }
+  .compact-order .left{ min-width:0; }
+  .compact-order .pk{ font-family:'IBM Plex Mono',monospace; font-weight:700; }
+  .compact-order .nm{ color:var(--ink-soft); font-size:0.74rem; }
+  .compact-order .cnt{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--ink-soft); flex-shrink:0; }
+
+  details.completed-block summary{
+    cursor:pointer; font-size:0.85rem; font-weight:600; padding:8px 0;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .completed-row{
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    padding:8px 0; border-bottom:1px solid var(--line); font-size:0.8rem;
+  }
+  .completed-row:last-child{ border-bottom:none; }
+  .completed-row .restore-btn{
+    background:none; border:1px solid var(--line); border-radius:6px; padding:4px 8px; font-size:0.72rem; color:var(--ink-soft);
+  }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:10px 18px; border-radius:999px;
+    font-size:0.84rem; opacity:0; pointer-events:none; transition:all 0.2s ease; z-index:80;
+    max-width:88vw; text-align:center;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<header class="site">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark" id="brandMark">CC</div>
+      <div class="brand-text">
+        <div class="store-name" id="storeNameHeader">Chicken Cheek</div>
+        <div class="tagline">Admin · คิวออเดอร์</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="conn-dot" id="connDot"><span class="dot"></span><span id="connLabel">เชื่อมต่อแล้ว</span></div>
+      <div class="clock mono" id="clock">--:--:--</div>
+    </div>
+  </div>
+</header>
+
+<div class="summary-bar">
+  <div class="summary-chip active-chip">กำลังทำ <span class="num mono" id="countActive">0</span></div>
+  <div class="summary-chip upcoming-chip">รอคิว <span class="num mono" id="countUpcoming">0</span></div>
+  <div class="summary-chip done-chip">เสร็จแล้ว <span class="num mono" id="countDone">0</span></div>
+</div>
+
+<main>
+  <div>
+    <section>
+      <div class="section-head">
+        <h2>คิวด่วน (ใกล้เวลารับ / ปักหมุด) <span class="live-tag"><span class="dot"></span>live</span></h2>
+        <span class="hint" id="activeHint">0 ออเดอร์</span>
+      </div>
+      <div id="activeList"></div>
+    </section>
+  </div>
+
+  <div>
+    <div class="sidebar-block">
+      <div class="section-head">
+        <h2>รอคิว</h2>
+        <span class="hint" id="upcomingHint">0 ออเดอร์</span>
+      </div>
+      <div id="upcomingList"></div>
+    </div>
+
+    <div class="sidebar-block">
+      <details class="completed-block">
+        <summary>เสร็จสิ้นแล้ว (<span id="completedCount">0</span>) <span style="font-weight:400;">▾</span></summary>
+        <div id="completedList" style="margin-top:8px;"></div>
+      </details>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // ============================================================
+  // CONFIG
+  // ============================================================
+  const CONFIG = {
+    storeName: "Chicken Cheek",
+    brandInitials: "CC",
+    activeWindowMinutes: 30,          // orders within this many minutes of pickup -> "active queue"
+    lookbackHours: 20,                 // only load orders created within this many hours (keeps it light)
+    currency: "฿",
+    pickup: { start: "11:00", end: "14:00", intervalMinutes: 15 } // must match the customer site
+  };
+
+  // ============================================================
+  // FIREBASE SETUP
+  // ============================================================
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getFirestore, collection, query, where, onSnapshot,
+    doc, updateDoc, deleteDoc, Timestamp, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBHYAjhLiIz8ghmMOHsyEz7AyWzymPaZCo",
+    authDomain: "pre-order-science-day.firebaseapp.com",
+    projectId: "pre-order-science-day",
+    storageBucket: "pre-order-science-day.firebasestorage.app",
+    messagingSenderId: "626064975047",
+    appId: "1:626064975047:web:f5a6b510d52adb062acae2",
+    measurementId: "G-1WVK4M44T1"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const ordersCol = collection(db, "orders");
+
+  document.getElementById("storeNameHeader").textContent = CONFIG.storeName;
+  document.getElementById("brandMark").textContent = CONFIG.brandInitials;
+
+  // ============================================================
+  // STATE
+  // ============================================================
+  let rawOrders = [];        // latest snapshot from Firestore, each with .id + data
+  let openEditId = null;     // which order card currently has its edit panel open
+  let editDraft = null;      // working copy of items/name/pickup while editing
+
+  function fmt(n){ return CONFIG.currency + Number(n).toFixed(2); }
+  function escapeHtml(str){
+    return String(str ?? "").replace(/[&<>"']/g, s => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    }[s]));
+  }
+
+  let toastTimer;
+  function showToast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  // ============================================================
+  // Firestore subscription
+  // ============================================================
+  const since = Timestamp.fromDate(new Date(Date.now() - CONFIG.lookbackHours * 3600 * 1000));
+  const q = query(ordersCol, where("createdAt", ">=", since));
+
+  const connDot = document.getElementById("connDot");
+  const connLabel = document.getElementById("connLabel");
+
+  onSnapshot(q, (snap) => {
+    connDot.classList.remove("offline");
+    connLabel.textContent = "เชื่อมต่อแล้ว";
+    rawOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderBoard();
+  }, (err) => {
+    console.error("[admin] snapshot error:", err);
+    connDot.classList.add("offline");
+    connLabel.textContent = "ขาดการเชื่อมต่อ";
+  });
+
+  // ============================================================
+  // Time helpers
+  // ============================================================
+  function pickupDateFor(order){
+    // pickupValue is "HH:MM" (24h) for a same-day pickup slot.
+    if (!order.pickupValue) return null;
+    const [h, m] = order.pickupValue.split(":").map(Number);
+    const base = order.createdAt?.toDate ? order.createdAt.toDate() : new Date();
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate(), h, m, 0, 0);
+    return d;
+  }
+  function minutesUntil(date){
+    if (!date) return 999;
+    return Math.round((date.getTime() - Date.now()) / 60000);
+  }
+  function countdownLabel(mins){
+    if (mins > 0) return `อีก ${mins} นาที`;
+    if (mins === 0) return "ถึงเวลาแล้ว";
+    return `เลยเวลา ${Math.abs(mins)} นาที`;
+  }
+  function countdownClass(mins){
+    if (mins <= 0) return "overdue";
+    if (mins <= 10) return "urgent";
+    return "";
+  }
+  function createdAtMs(order){
+    return order.createdAt?.toMillis ? order.createdAt.toMillis() : 0;
+  }
+
+  // ============================================================
+  // Grouping + sorting
+  // ============================================================
+  function computeGroups(){
+    const active = [], upcoming = [], completed = [];
+
+    rawOrders.forEach(o => {
+      const pDate = pickupDateFor(o);
+      const mins = minutesUntil(pDate);
+      const enriched = { ...o, _pickupDate: pDate, _minsUntil: mins };
+
+      if (o.status === "completed"){
+        completed.push(enriched);
+      } else if (o.topPriority || mins <= CONFIG.activeWindowMinutes){
+        active.push(enriched);
+      } else {
+        upcoming.push(enriched);
+      }
+    });
+
+    const priorityCompare = (a, b) => {
+      if (!!b.topPriority !== !!a.topPriority) return (b.topPriority ? 1 : 0) - (a.topPriority ? 1 : 0);
+      if (a._minsUntil !== b._minsUntil) return a._minsUntil - b._minsUntil;
+      return createdAtMs(a) - createdAtMs(b);
+    };
+    active.sort(priorityCompare);
+    upcoming.sort((a, b) => {
+      if (a._minsUntil !== b._minsUntil) return a._minsUntil - b._minsUntil;
+      return createdAtMs(a) - createdAtMs(b);
+    });
+    completed.sort((a, b) => {
+      const am = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : createdAtMs(a);
+      const bm = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : createdAtMs(b);
+      return bm - am;
+    });
+
+    return { active, upcoming, completed };
+  }
+
+  // ============================================================
+  // Actions -> Firestore
+  // ============================================================
+  async function setStatus(orderId, status){
+    try{
+      await updateDoc(doc(db, "orders", orderId), { status, updatedAt: serverTimestamp() });
+    }catch(err){
+      console.error(err);
+      showToast("อัปเดตสถานะไม่สำเร็จ: " + (err.message || err));
+    }
+  }
+  async function togglePin(orderId, current){
+    try{
+      await updateDoc(doc(db, "orders", orderId), { topPriority: !current, updatedAt: serverTimestamp() });
+    }catch(err){
+      console.error(err);
+      showToast("ปักหมุดไม่สำเร็จ: " + (err.message || err));
+    }
+  }
+  async function removeOrder(orderId){
+    if (!confirm("ลบออเดอร์นี้ถาวรใช่ไหม? กู้คืนไม่ได้")) return;
+    try{
+      await deleteDoc(doc(db, "orders", orderId));
+      showToast("ลบออเดอร์แล้ว");
+    }catch(err){
+      console.error(err);
+      showToast("ลบไม่สำเร็จ: " + (err.message || err));
+    }
+  }
+  async function saveEdit(orderId){
+    if (!editDraft) return;
+    const items = editDraft.items.filter(i => i.qty > 0);
+    if (items.length === 0){
+      showToast("ออเดอร์ต้องมีอย่างน้อย 1 รายการ (ลบทั้งออเดอร์แทนถ้าจะเอาออกทั้งหมด)");
+      return;
+    }
+    const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+    try{
+      await updateDoc(doc(db, "orders", orderId), {
+        customerName: editDraft.customerName.trim() || "ลูกค้า",
+        pickupValue: editDraft.pickupValue,
+        pickupTime: editDraft.pickupTimeLabel,
+        items,
+        total,
+        updatedAt: serverTimestamp()
+      });
+      openEditId = null; editDraft = null;
+      showToast("บันทึกการแก้ไขแล้ว");
+    }catch(err){
+      console.error(err);
+      showToast("บันทึกไม่สำเร็จ: " + (err.message || err));
+    }
+  }
+
+  // ============================================================
+  // Pickup time options (for the edit dropdown)
+  // ============================================================
+  function buildPickupOptions(){
+    const { start, end, intervalMinutes } = CONFIG.pickup;
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    let cur = sh * 60 + sm;
+    const last = eh * 60 + em;
+    const options = [];
+    while (cur <= last){
+      const h = Math.floor(cur / 60), m = cur % 60;
+      const value = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+      const period = h >= 12 ? "PM" : "AM";
+      let h12 = h % 12; if (h12 === 0) h12 = 12;
+      options.push({ value, label: `${h12}:${String(m).padStart(2,"0")} ${period}` });
+      cur += intervalMinutes;
+    }
+    return options;
+  }
+  const PICKUP_OPTIONS = buildPickupOptions();
+
+  // ============================================================
+  // Rendering: order card
+  // ============================================================
+  function statusLabel(s){
+    return { pending: "รอดำเนินการ", preparing: "กำลังเตรียม", ready: "พร้อมรับ", completed: "เสร็จสิ้น" }[s] || s;
+  }
+
+  function orderCardHtml(o, opts = {}){
+    const mins = o._minsUntil;
+    const cdClass = countdownClass(mins);
+    let cardClass = "order-card";
+    if (o.topPriority) cardClass += " pinned";
+    else if (cdClass === "overdue") cardClass += " overdue";
+    else if (cdClass === "urgent") cardClass += " urgent";
+    if (o.status === "completed") cardClass += " status-completed";
+
+    const isEditing = openEditId === o.id;
+
+    return `
+    <div class="${cardClass}" data-id="${o.id}">
+      <div class="order-top">
+        <div>
+          <div class="order-id-row">
+            <span class="order-id">#${o.id.slice(-6).toUpperCase()}</span>
+            ${o.topPriority ? `<span class="pin-flag" title="ปักหมุดสำคัญ">📌</span>` : ""}
+          </div>
+          <div class="order-meta">
+            <span class="pickup-time-big">${escapeHtml(o.pickupTime || "—")}</span>
+            <span>ลูกค้า: <b>${escapeHtml(o.customerName || "—")}</b></span>
+          </div>
+        </div>
+        ${o.status !== "completed" ? `<span class="countdown ${cdClass}">${countdownLabel(mins)}</span>` : `<span class="countdown">✓ ${statusLabel(o.status)}</span>`}
+      </div>
+
+      <div class="order-items">
+        ${(o.items || []).map(i => `
+          <div class="order-item-row"><span><span class="qty">${i.qty}×</span> ${escapeHtml(i.name)}</span><span class="mono">${fmt(i.price * i.qty)}</span></div>
+          ${i.notes ? `<div class="order-item-notes">“${escapeHtml(i.notes)}”</div>` : ""}
+        `).join("")}
+        <div class="order-total-row"><span>รวม (จ่ายที่ร้าน)</span><span class="mono">${fmt(o.total || 0)}</span></div>
+      </div>
+
+      <div class="status-row" data-role="status-row">
+        ${["pending","preparing","ready","completed"].map(s => `
+          <button class="status-btn ${o.status === s ? "active" : ""}" data-status="${s}">${statusLabel(s)}</button>
+        `).join("")}
+      </div>
+
+      <div class="action-row">
+        <button class="action-btn ${o.topPriority ? "pin-on" : ""}" data-action="pin">📌 ${o.topPriority ? "ยกเลิกปักหมุด" : "ปักหมุดด่วน"}</button>
+        <button class="action-btn" data-action="edit">✏️ แก้ไข</button>
+        <button class="action-btn danger" data-action="delete">🗑️ ลบ</button>
+      </div>
+
+      <div class="edit-panel ${isEditing ? "open" : ""}" data-role="edit-panel">
+        ${isEditing ? editPanelHtml(o) : ""}
+      </div>
+    </div>`;
+  }
+
+  function editPanelHtml(o){
+    if (!editDraft) return "";
+    return `
+      <div class="edit-field">
+        <label>ชื่อผู้สั่ง</label>
+        <input type="text" data-field="customerName" value="${escapeHtml(editDraft.customerName)}">
+      </div>
+      <div class="edit-field">
+        <label>เวลารับอาหาร</label>
+        <select data-field="pickupValue">
+          ${PICKUP_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === editDraft.pickupValue ? "selected" : ""}>${opt.label}</option>`).join("")}
+        </select>
+      </div>
+      <div class="edit-field">
+        <label>รายการ</label>
+        ${editDraft.items.map((i, idx) => `
+          <div class="edit-item-row" data-idx="${idx}">
+            <span class="name">${escapeHtml(i.name)}</span>
+            <div class="stepper">
+              <button type="button" data-edit-action="dec" data-idx="${idx}">−</button>
+              <span class="val mono">${i.qty}</span>
+              <button type="button" data-edit-action="inc" data-idx="${idx}">+</button>
+            </div>
+          </div>
+          <input type="text" class="note-input" data-edit-note="${idx}" placeholder="โน้ต" value="${escapeHtml(i.notes || "")}">
+        `).join("")}
+      </div>
+      <div class="edit-actions">
+        <button class="save-btn" data-action="save">บันทึก</button>
+        <button class="cancel-btn" data-action="cancel">ยกเลิก</button>
+      </div>
+    `;
+  }
+
+  function wireCard(cardEl, o){
+    cardEl.querySelectorAll('[data-status]').forEach(btn => {
+      btn.onclick = () => setStatus(o.id, btn.dataset.status);
+    });
+    cardEl.querySelector('[data-action="pin"]').onclick = () => togglePin(o.id, o.topPriority);
+    cardEl.querySelector('[data-action="delete"]').onclick = () => removeOrder(o.id);
+    cardEl.querySelector('[data-action="edit"]').onclick = () => {
+      if (openEditId === o.id){
+        openEditId = null; editDraft = null;
+      } else {
+        openEditId = o.id;
+        editDraft = {
+          customerName: o.customerName || "",
+          pickupValue: o.pickupValue || (PICKUP_OPTIONS[0]?.value || ""),
+          items: (o.items || []).map(i => ({ ...i }))
+        };
+      }
+      renderBoard();
+    };
+
+    const editPanel = cardEl.querySelector('[data-role="edit-panel"]');
+    if (openEditId === o.id && editPanel){
+      editPanel.querySelector('[data-field="customerName"]').oninput = (e) => { editDraft.customerName = e.target.value; };
+      editPanel.querySelector('[data-field="pickupValue"]').onchange = (e) => { editDraft.pickupValue = e.target.value; };
+      editPanel.querySelectorAll('[data-edit-action]').forEach(btn => {
+        btn.onclick = () => {
+          const idx = Number(btn.dataset.idx);
+          if (btn.dataset.editAction === "inc") editDraft.items[idx].qty += 1;
+          else editDraft.items[idx].qty = Math.max(0, editDraft.items[idx].qty - 1);
+          renderBoard();
+        };
+      });
+      editPanel.querySelectorAll('[data-edit-note]').forEach(inp => {
+        inp.oninput = (e) => { editDraft.items[Number(inp.dataset.editNote)].notes = e.target.value; };
+      });
+      editPanel.querySelector('[data-action="save"]').onclick = () => {
+        const opt = PICKUP_OPTIONS.find(p => p.value === editDraft.pickupValue);
+        editDraft.pickupTimeLabel = opt ? opt.label : editDraft.pickupValue;
+        saveEdit(o.id);
+      };
+      editPanel.querySelector('[data-action="cancel"]').onclick = () => {
+        openEditId = null; editDraft = null; renderBoard();
+      };
+    }
+  }
+
+  // ============================================================
+  // Rendering: board
+  // ============================================================
+  function renderBoard(){
+    const { active, upcoming, completed } = computeGroups();
+
+    document.getElementById("countActive").textContent = active.length;
+    document.getElementById("countUpcoming").textContent = upcoming.length;
+    document.getElementById("countDone").textContent = completed.length;
+    document.getElementById("activeHint").textContent = active.length + " ออเดอร์";
+    document.getElementById("upcomingHint").textContent = upcoming.length + " ออเดอร์";
+    document.getElementById("completedCount").textContent = completed.length;
+
+    const activeList = document.getElementById("activeList");
+    activeList.innerHTML = active.length
+      ? active.map(o => orderCardHtml(o)).join("")
+      : `<div class="empty-state">ยังไม่มีออเดอร์ในคิวด่วนตอนนี้</div>`;
+    active.forEach(o => wireCard(activeList.querySelector(`[data-id="${o.id}"]`), o));
+
+    const upcomingList = document.getElementById("upcomingList");
+    upcomingList.innerHTML = upcoming.length
+      ? upcoming.map(o => `
+        <div class="compact-order" data-id="${o.id}">
+          <div class="left">
+            <div class="pk mono">${escapeHtml(o.pickupTime || "—")}</div>
+            <div class="nm">${escapeHtml(o.customerName || "—")} · ${(o.items||[]).reduce((s,i)=>s+i.qty,0)} ชิ้น</div>
+          </div>
+          <div class="cnt">${countdownLabel(o._minsUntil)}</div>
+        </div>
+      `).join("")
+      : `<div class="empty-state">ไม่มีออเดอร์รอคิว</div>`;
+
+    const completedList = document.getElementById("completedList");
+    completedList.innerHTML = completed.length
+      ? completed.slice(0, 25).map(o => `
+        <div class="completed-row" data-id="${o.id}">
+          <span>#${o.id.slice(-6).toUpperCase()} · ${escapeHtml(o.customerName || "—")} · ${fmt(o.total||0)}</span>
+          <button class="restore-btn" data-restore="${o.id}">ย้อนกลับ</button>
+        </div>
+      `).join("")
+      : `<div class="empty-state" style="padding:16px;">ยังไม่มีออเดอร์ที่เสร็จ</div>`;
+    completedList.querySelectorAll('[data-restore]').forEach(btn => {
+      btn.onclick = () => setStatus(btn.dataset.restore, "ready");
+    });
+  }
+
+  // ============================================================
+  // Clock + periodic re-render (so countdowns / active-window stay live)
+  // ============================================================
+  function tickClock(){
+    document.getElementById("clock").textContent = new Date().toLocaleTimeString("th-TH", { hour12:false });
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+  setInterval(renderBoard, 20000); // re-sort / re-group every 20s as time passes
+
+  renderBoard();
+</script>
+</body>
+</html>
