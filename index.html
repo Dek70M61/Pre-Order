@@ -656,13 +656,15 @@
   const db = getFirestore(app);
   const ordersCol = collection(db, "orders");
 
-  // Test/Live mode banner — reads the same settings/app.testMode flag
-  // the admin panel's switch writes to. Firestore's realtime listener
+  // Test/Live mode banner + payment lock — reads the same settings/app.testMode
+  // flag the admin panel's switch writes to. Firestore's realtime listener
   // means this updates within about a second of the admin flipping it.
   onSnapshot(doc(db, "settings", "app"), (snap) => {
     const data = snap.exists() ? snap.data() : null;
     const isTest = !!data && (data.testMode === "1" || data.testMode === 1);
+    isTestMode = isTest;
     document.getElementById("testModeStrip").style.display = isTest ? "block" : "none";
+    applyTestModePaymentLock();
   }, (err) => {
     console.error("[preorder] settings listener error:", err);
   });
@@ -674,6 +676,7 @@
   let activeOrderUnsub = null;
   let titleFlashTimer = null;
   let selectedPaymentMethod = "cash";
+  let isTestMode = false; // mirrors settings/app.testMode ("1" = test) from Firestore
   const ORIGINAL_TITLE = CONFIG.storeName + " — สั่งล่วงหน้า";
 
   function loadCart(){
@@ -916,9 +919,26 @@
     confirmBtn.textContent = selectedPaymentMethod === "online" ? "ฉันโอนเงินแล้ว ยืนยันคำสั่งซื้อ" : "ยืนยันและส่งคำสั่งซื้อ";
     if (selectedPaymentMethod === "online") renderPromptPayQR();
   }
+
+  // While the store is in test mode, the online/PromptPay option is
+  // disabled entirely so no one can accidentally scan a real QR and
+  // transfer real money against a test order. Cash stays available.
+  function applyTestModePaymentLock(){
+    const onlineBtn = document.querySelector('.pay-option[data-method="online"]');
+    if (!onlineBtn) return;
+    onlineBtn.disabled = isTestMode;
+    onlineBtn.classList.toggle("test-locked", isTestMode);
+    const sub = onlineBtn.querySelector("span");
+    if (sub) sub.textContent = isTestMode ? "(ปิดชั่วคราว - โหมดทดสอบ)" : "(พร้อมเพย์ QR)";
+    if (isTestMode && selectedPaymentMethod === "online"){
+      selectedPaymentMethod = "cash";
+    }
+    updatePaymentUI();
+  }
+
   document.getElementById("paymentToggle").addEventListener("click", (e) => {
     const btn = e.target.closest(".pay-option");
-    if (!btn) return;
+    if (!btn || btn.disabled) return;
     selectedPaymentMethod = btn.dataset.method;
     updatePaymentUI();
   });
@@ -937,7 +957,7 @@
     document.getElementById("payAmountNote").textContent = fmt(total);
 
     selectedPaymentMethod = "cash";
-    updatePaymentUI();
+    applyTestModePaymentLock();
 
     closeDrawer();
     checkoutOverlay.classList.add("open");
@@ -1046,6 +1066,16 @@
   confirmBtn.onclick = async () => {
     const items = cartItemsArray();
     if (items.length === 0) return;
+
+    // Belt-and-braces: even though the online option is disabled during
+    // test mode, refuse to submit an online-payment order if it somehow
+    // got selected (e.g. the flag flipped mid-checkout).
+    if (isTestMode && selectedPaymentMethod === "online"){
+      selectedPaymentMethod = "cash";
+      applyTestModePaymentLock();
+      showToast("โหมดทดสอบปิดการชำระผ่านพร้อมเพย์ชั่วคราว กรุณาเลือกเงินสด");
+      return;
+    }
 
     const pickupTime = pickupSelect.options[pickupSelect.selectedIndex]?.textContent || "";
     const pickupValue = pickupSelect.value;
