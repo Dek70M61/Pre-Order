@@ -8,11 +8,16 @@
 
 <!-- ============================================================
   วิธีแก้ไขเว็บนี้ (อ่านก่อน)
-  - ชื่อร้าน, เมนูอาหาร, รายการเครื่องดื่ม, ช่วงเวลารับอาหาร
+  - ชื่อร้าน, เมนูอาหาร, รายการเครื่องดื่ม, ช่วงเวลารับอาหาร, รูปภาพต่างๆ
     ทั้งหมดตั้งค่าได้ที่ CONFIG object ด้านบนของ <script> ท้ายไฟล์
   - ⚠️ สำคัญ: ต้องใส่ CONFIG.payment.promptPayId เป็นเบอร์พร้อมเพย์
     (หรือเลขผู้เสียภาษี 13 หลัก) ของร้านจริงก่อนขึ้นเว็บจริง
     ไม่งั้นลูกค้าเลือก "โอนเงิน/พร้อมเพย์" แล้วจะไม่มี QR ให้สแกน
+  - รูปภาพ: ใส่เป็นลิงก์ URL ตรง CONFIG.brandLogoUrl (โลโก้), CONFIG.food.image
+    (รูปเมนูอาหาร), และ image ของแต่ละแก้วใน CONFIG.drinks ปล่อยว่างไว้ได้
+    ถ้ายังไม่มีรูป จะโชว์กล่องว่างแทน
+  - CONFIG.appVersion ต้องตรงกับ CONFIG.appVersion ใน admin.html เสมอ
+    (ไว้เช็คว่าไฟล์ทั้งสองฝั่งเป็นเวอร์ชันคู่กันจริง)
   - ไฟล์นี้เป็นไฟล์เดียวจบ อัปโหลดขึ้น Firebase Hosting / Netlify /
     GitHub Pages ได้เลย
 ============================================================= -->
@@ -88,8 +93,9 @@
     background:var(--teal); color:#fff;
     display:flex; align-items:center; justify-content:center;
     font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;
-    flex-shrink:0;
+    flex-shrink:0; overflow:hidden;
   }
+  .brand-mark img{ width:100%; height:100%; object-fit:cover; display:block; }
   .brand-text .store-name{ font-size:1.15rem; font-weight:700; line-height:1.15; }
   .brand-text .tagline{ font-size:0.72rem; color:var(--ink-soft); letter-spacing:0.03em; }
 
@@ -109,8 +115,9 @@
   .test-mode-strip{
     background:var(--orange); color:#fff; text-align:center;
     font-size:0.8rem; font-weight:600; padding:8px 16px;
-    letter-spacing:0.01em;
+    letter-spacing:0.01em; line-height:1.5;
   }
+  .test-mode-strip .en{ display:block; font-weight:500; font-size:0.74rem; opacity:0.92; }
 
   .resume-banner{
     max-width:1100px; margin:12px auto 0; padding:0 18px;
@@ -168,8 +175,9 @@
     border:1px dashed var(--line);
     display:flex; align-items:center; justify-content:center;
     font-family:'IBM Plex Mono',monospace; font-size:0.6rem; color:var(--ink-soft);
-    text-align:center; flex-shrink:0; padding:4px;
+    text-align:center; flex-shrink:0; padding:4px; overflow:hidden;
   }
+  .food-thumb img{ width:100%; height:100%; object-fit:cover; border-radius:8px; display:block; }
   .food-title-row{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; }
   .food-name{ font-size:1.15rem; font-weight:700; }
   .food-desc{ color:var(--ink-soft); font-size:0.9rem; margin-top:4px; max-width:48ch; }
@@ -212,6 +220,11 @@
     font-family:'IBM Plex Mono',monospace; font-size:0.65rem; color:var(--ink-soft);
     border:1px dashed var(--line); border-radius:6px; padding:2px 6px;
   }
+  .drink-thumb{
+    width:100%; aspect-ratio:1/1; max-height:96px; border-radius:8px;
+    overflow:hidden; background:var(--paper-dim); border:1px solid var(--line);
+  }
+  .drink-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
   .drink-name{ font-weight:700; font-size:0.98rem; padding-right:44px; }
   .drink-desc{ font-size:0.78rem; color:var(--ink-soft); min-height:2.4em; }
   .drink-bottom{ display:flex; align-items:center; justify-content:space-between; margin-top:auto; gap:8px; }
@@ -315,6 +328,10 @@
   .pay-option.active{
     border-color:var(--teal); background:rgba(47,111,98,0.08); color:var(--teal-dark);
   }
+  .pay-option:disabled, .pay-option.test-locked{
+    opacity:0.5; cursor:not-allowed; border-style:dashed; background:var(--paper-dim);
+  }
+  .pay-option:disabled:hover{ border-color:var(--line); }
 
   .pay-note{
     display:flex; gap:10px; align-items:flex-start;
@@ -365,6 +382,7 @@
   .ticket-eyebrow{ font-family:'IBM Plex Mono',monospace; font-size:0.7rem; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.1em; }
   .ticket h2{ font-size:1.3rem; margin-top:4px; }
   .order-id{ font-family:'IBM Plex Mono',monospace; font-size:0.95rem; color:var(--teal-dark); margin-top:2px; }
+  .order-id.is-test{ color:var(--orange-dark); }
   .ticket-rows .row{ display:flex; justify-content:space-between; font-size:0.86rem; padding:5px 0; }
   .ticket-rows .row.total{ font-weight:700; font-size:1.05rem; border-top:1px solid var(--line); margin-top:6px; padding-top:10px; }
   .status-stamp{
@@ -399,6 +417,11 @@
     max-width:88vw; text-align:center;
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .app-version-tag{
+    text-align:center; font-size:0.68rem; color:var(--ink-soft);
+    font-family:'IBM Plex Mono',monospace; padding:18px 18px 0; opacity:0.6;
+  }
 
   @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
 
@@ -444,7 +467,9 @@
 </header>
 
 <div class="test-mode-strip" id="testModeStrip" style="display:none;">
-  🧪 ระบบอยู่ในโหมดทดสอบชั่วคราว — ออเดอร์ที่ส่งตอนนี้จะไม่ถูกดำเนินการจริง <br> กรุณาติดต่อ Admin เพื่อเปิดระบบ
+  🧪 ระบบอยู่ในโหมดทดสอบชั่วคราว — ออเดอร์ที่ส่งตอนนี้จะไม่ถูกดำเนินการจริง<br>
+  กรุณาติดต่อ Admin เพื่อเปิดระบบ
+  <span class="en">Please contact Admin To Change Mode</span>
 </div>
 
 <div class="resume-banner" id="resumeBanner">
@@ -458,7 +483,7 @@
 <div class="hero">
   <div class="eyebrow">สั่งล่วงหน้า &amp; รับที่ร้าน</div>
   <h1 id="storeNameHero">Chicken Cheek</h1>
-  <p>เลือกเมนูที่ต้องการ ใส่ตะกร้า เขียนโน้ตถึงเชฟได้ เลือกเวลาที่จะมารับอาหาร แล้วเลือกจ่ายเงินสดหน้าร้าน หรือโอนผ่านพร้อมเพย์ล่วงหน้า</p>
+  <p>เลือกเมนูที่ต้องการ ใส่ตะกร้า เขียนโน้ตถึงเชฟได้ เลือกเวลาที่จะมารับอาหาร (หรือรับทันที) แล้วเลือกจ่ายเงินสดหน้าร้าน หรือโอนผ่านพร้อมเพย์ล่วงหน้า</p>
 </div>
 
 <main>
@@ -595,23 +620,33 @@
     storeName: "Chicken Cheek",
     tagline: "สั่งล่วงหน้า · รับที่ร้านเท่านั้น",
     brandInitials: "CC",
+    // ใส่ลิงก์โลโก้ร้าน (เช่น "https://i.imgur.com/xxxxx.png") ถ้ามี
+    // ปล่อยว่างไว้ ("") จะโชว์ตัวอักษร brandInitials แทน — ควรตั้งค่าให้
+    // ตรงกับ admin.html ด้วย เพื่อให้โลโก้เหมือนกันทั้งสองฝั่ง
+    brandLogoUrl: "",
+
+    // ต้องตรงกับ CONFIG.appVersion ใน admin.html เสมอ
+    appVersion: "1.1.0",
 
     food: {
       id: "food-1",
       name: "หมี่ไก่ฉีก",
       description: "Test",
       price: 39.00,
+      // ใส่ลิงก์รูปเมนูตรงนี้ เช่น "https://i.imgur.com/xxxxx.jpg"
+      // ปล่อยว่างไว้ ("") ถ้ายังไม่มีรูป จะโชว์กล่องเปล่าแทน
+      image: "",
       notesPlaceholder: "ไม่เอาผัก, ไม่เอาไก่ ฯลฯ"
     },
 
     drinks: [
-      { id: "drink-1", name: "โค้ก", description: "", price: 10.00, tag: "500ml" },
-      { id: "drink-2", name: "เป็ปซี่", description: "", price: 10.00, tag: "500ml" },
-      { id: "drink-3", name: "แฟนต้าเขียว", description: "", price: 10.00, tag: "500ml" },
-      { id: "drink-4", name: "แฟนต้าแดง", description: "", price: 10.00, tag: "500ml" },
-      { id: "drink-5", name: "สไปร์ท", description: "", price: 10.00, tag: "500ml" },
-      { id: "drink-6", name: "แฟนต้าองุ่น", description: "", price: 10.00, tag: "500ml" },
-      { id: "drink-7", name: "แฟนต้าลิ้นจี่", description: "", price: 10.00, tag: "500ml" }
+      { id: "drink-1", name: "โค้ก", description: "", price: 10.00, tag: "500ml", image: "" },
+      { id: "drink-2", name: "เป็ปซี่", description: "", price: 10.00, tag: "500ml", image: "" },
+      { id: "drink-3", name: "แฟนต้าเขียว", description: "", price: 10.00, tag: "500ml", image: "" },
+      { id: "drink-4", name: "แฟนต้าแดง", description: "", price: 10.00, tag: "500ml", image: "" },
+      { id: "drink-5", name: "สไปร์ท", description: "", price: 10.00, tag: "500ml", image: "" },
+      { id: "drink-6", name: "แฟนต้าองุ่น", description: "", price: 10.00, tag: "500ml", image: "" },
+      { id: "drink-7", name: "แฟนต้าลิ้นจี่", description: "", price: 10.00, tag: "500ml", image: "" }
     ],
 
     pickup: {
@@ -655,6 +690,8 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const ordersCol = collection(db, "orders");
+
+  console.info("[ChickenCheek] index.html app version:", CONFIG.appVersion);
 
   // Test/Live mode banner + payment lock — reads the same settings/app.testMode
   // flag the admin panel's switch writes to. Firestore's realtime listener
@@ -701,10 +738,18 @@
   // ============================================================
   // 4. RENDER: header / brand
   // ============================================================
+  function renderBrandMark(){
+    const el = document.getElementById("brandMark");
+    if (CONFIG.brandLogoUrl){
+      el.innerHTML = `<img src="${escapeHtml(CONFIG.brandLogoUrl)}" alt="${escapeHtml(CONFIG.storeName)}">`;
+    } else {
+      el.textContent = CONFIG.brandInitials;
+    }
+  }
   document.getElementById("storeNameHeader").textContent = CONFIG.storeName;
   document.getElementById("storeNameHero").textContent = CONFIG.storeName;
   document.getElementById("storeTagline").textContent = CONFIG.tagline;
-  document.getElementById("brandMark").textContent = CONFIG.brandInitials;
+  renderBrandMark();
   document.getElementById("ticketStoreName").textContent = CONFIG.storeName;
   document.title = ORIGINAL_TITLE;
 
@@ -719,7 +764,7 @@
 
     foodContainer.innerHTML = `
       <div class="food-card">
-        <div class="food-thumb">รูปภาพ<br>(ที่ว่าง)</div>
+        <div class="food-thumb">${f.image ? `<img src="${escapeHtml(f.image)}" alt="${escapeHtml(f.name)}">` : `รูปภาพ<br>(ที่ว่าง)`}</div>
         <div style="min-width:0;">
           <div class="food-title-row">
             <div>
@@ -775,6 +820,7 @@
       return `
         <div class="drink-card">
           ${d.tag ? `<span class="tag">${escapeHtml(d.tag)}</span>` : ""}
+          ${d.image ? `<div class="drink-thumb"><img src="${escapeHtml(d.image)}" alt="${escapeHtml(d.name)}"></div>` : ""}
           <div class="drink-name">${escapeHtml(d.name)}</div>
           <div class="drink-desc">${escapeHtml(d.description || "")}</div>
           <div class="drink-bottom">
@@ -889,13 +935,18 @@
   const submitErrorEl = document.getElementById("submitError");
   const confirmBtn = document.getElementById("confirmOrderBtn");
 
+  // "now" is a special sentinel meaning "รับทันที (ASAP)" — both cash and
+  // online orders can use it. It's resolved to the actual clock time only
+  // when the order is actually submitted (see confirmBtn.onclick below),
+  // not when the dropdown is built, so it stays accurate even if the
+  // customer takes a minute to finish checkout.
   function buildPickupTimes(){
     const { start, end, intervalMinutes } = CONFIG.pickup;
     const [sh, sm] = start.split(":").map(Number);
     const [eh, em] = end.split(":").map(Number);
     let cur = sh * 60 + sm;
     const last = eh * 60 + em;
-    const options = [];
+    const options = [{ value: "now", label: "⚡ รับทันที (ASAP)" }];
     while (cur <= last){
       const h = Math.floor(cur / 60), m = cur % 60;
       options.push({ value: `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`, label: to12h(h, m) });
@@ -1077,11 +1128,21 @@
       return;
     }
 
-    const pickupTime = pickupSelect.options[pickupSelect.selectedIndex]?.textContent || "";
-    const pickupValue = pickupSelect.value;
+    let pickupValue = pickupSelect.value;
+    let pickupTime = pickupSelect.options[pickupSelect.selectedIndex]?.textContent || "";
+    if (pickupValue === "now"){
+      // Resolve "รับทันที (ASAP)" to the actual clock time right now,
+      // at the moment of submission — works the same for cash and
+      // online-payment orders.
+      const now = new Date();
+      pickupValue = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+      pickupTime = "รับทันที (ASAP) · " + to12h(now.getHours(), now.getMinutes());
+    }
+
     const customerName = document.getElementById("customerName").value.trim() || "ลูกค้า";
     const total = cartTotal();
     const paymentMethod = selectedPaymentMethod; // "cash" | "online"
+    const isTestOrder = isTestMode; // stamped at submit time
 
     confirmBtn.disabled = true;
     confirmBtn.textContent = "กำลังส่งคำสั่งซื้อ…";
@@ -1100,6 +1161,7 @@
         pickupTime,
         pickupValue,
         paymentMethod,
+        isTestOrder,
         status: "pending",
         createdAt: serverTimestamp()
       });
@@ -1113,7 +1175,7 @@
       const orderRecord = {
         id: docRef.id, storeName: CONFIG.storeName, customerName,
         items: items.map(i => ({ ...i })), total, pickupTime, pickupValue,
-        paymentMethod, savedAt: Date.now()
+        paymentMethod, isTestOrder, savedAt: Date.now()
       };
       saveLastOrder(orderRecord);
       showConfirmation(orderRecord);
@@ -1141,7 +1203,11 @@
   const screenshotOverlay = document.getElementById("screenshotOverlay");
 
   function showConfirmation(order){
-    document.getElementById("ticketOrderId").textContent = "#" + order.id.slice(-6).toUpperCase();
+    const idLabel = (order.isTestOrder ? "Test-" : "") + "#" + order.id.slice(-6).toUpperCase();
+    const ticketIdEl = document.getElementById("ticketOrderId");
+    ticketIdEl.textContent = idLabel;
+    ticketIdEl.classList.toggle("is-test", !!order.isTestOrder);
+
     document.getElementById("ticketPickupTime").textContent = order.pickupTime;
     document.getElementById("ticketCustomerName").textContent = order.customerName;
     document.getElementById("ticketItems").innerHTML = order.items.map(i => `
@@ -1220,7 +1286,8 @@
     const last = loadLastOrder();
     const dismissed = sessionStorage.getItem("preorder_bannerDismissed") === last?.id;
     if (last && !dismissed){
-      document.getElementById("resumeOrderId").textContent = "#" + last.id.slice(-6).toUpperCase();
+      const idLabel = (last.isTestOrder ? "Test-" : "") + "#" + last.id.slice(-6).toUpperCase();
+      document.getElementById("resumeOrderId").textContent = idLabel;
       resumeBanner.classList.add("show");
     }else{
       resumeBanner.classList.remove("show");
