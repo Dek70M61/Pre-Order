@@ -9,6 +9,13 @@
   วิธีแก้ไข: ตั้งค่าหลักอยู่ใน CONFIG object ด้านล่างของ <script>
   ไม่มีระบบล็อกอินในไฟล์นี้ — ใครก็ตามที่มีลิงก์นี้แก้ไข/ลบออเดอร์ได้
   ถ้าจะใช้จริง ควรเพิ่ม Firebase Auth + Firestore Rules ป้องกันไว้ด้วย
+
+  Test Switch:
+  - อ่าน/เขียนค่าที่ Firestore เอกสาร settings/app ฟิลด์ testMode
+    เก็บเป็นเลขหลักเดียวแบบข้อความ "0" หรือ "1"
+  - "1" = โหมดทดสอบ (Test) | "0" = โหมดใช้งานจริง (Real/Live)
+  - กดสวิตช์เพื่อสลับค่า 0 <-> 1 ได้เลย ฝั่งลูกค้า (index.html) ฟัง
+    ค่านี้แบบเรียลไทม์อยู่แล้ว จะอัปเดตภายในไม่กี่วินาทีโดยอัตโนมัติ
 ============================================================= -->
 
 <style>
@@ -52,16 +59,37 @@
   }
   .brand-text .store-name{ font-size:1.05rem; font-weight:700; line-height:1.15; }
   .brand-text .tagline{ font-size:0.7rem; color:var(--ink-soft); }
-  .header-right{ display:flex; align-items:center; gap:14px; }
+  .header-right{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   .clock{ font-family:'IBM Plex Mono',monospace; font-size:0.9rem; color:var(--ink-soft); }
   .conn-dot{ display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--ink-soft); }
   .conn-dot .dot{ width:8px; height:8px; border-radius:50%; background:var(--success); }
   .conn-dot.offline .dot{ background:var(--danger); animation:blink 1s infinite; }
   @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
+  /* ---------- Test Switch ---------- */
+  .test-switch{
+    display:inline-flex; align-items:center; gap:9px;
+    border:1px solid var(--line); background:#fff; border-radius:999px;
+    padding:6px 12px 6px 6px;
+  }
+  .test-switch-track{
+    width:38px; height:22px; border-radius:999px; background:var(--line);
+    position:relative; flex-shrink:0; transition:background 0.18s ease;
+  }
+  .test-switch-thumb{
+    position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.25);
+    transition:transform 0.18s ease;
+  }
+  .test-switch.on .test-switch-track{ background:var(--orange); }
+  .test-switch.on .test-switch-thumb{ transform:translateX(16px); }
+  .test-switch-label{ font-size:0.78rem; font-weight:700; color:var(--ink-soft); white-space:nowrap; }
+  .test-switch.on .test-switch-label{ color:var(--orange-dark); }
+  .test-switch:not(.on) .test-switch-label{ color:var(--teal-dark); }
+
   .summary-bar{
     max-width:1180px; margin:0 auto; padding:16px 18px 0;
-    display:flex; gap:10px; flex-wrap:wrap;
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
   }
   .summary-chip{
     background:#fff; border:1px solid var(--line); border-radius:10px;
@@ -71,6 +99,12 @@
   .summary-chip.active-chip .num{ color:var(--orange-dark); }
   .summary-chip.upcoming-chip .num{ color:var(--teal-dark); }
   .summary-chip.done-chip .num{ color:var(--ink-soft); }
+  .mode-chip{
+    border-radius:10px; padding:9px 14px; font-size:0.78rem; font-weight:700;
+    border:1px dashed var(--line); color:var(--ink-soft);
+  }
+  .mode-chip.test{ border-color:var(--orange); color:var(--orange-dark); background:rgba(226,112,58,0.08); }
+  .mode-chip.live{ border-color:var(--teal); color:var(--teal-dark); background:rgba(47,111,98,0.08); }
 
   main{
     max-width:1180px; margin:0 auto; padding:16px 18px 60px;
@@ -108,6 +142,7 @@
   .order-card.overdue{ border-left-color:var(--danger); }
   .order-card.pinned{ border-left-color:var(--teal); background:linear-gradient(0deg, rgba(47,111,98,0.05), rgba(47,111,98,0.05)), #fff; }
   .order-card.status-completed{ opacity:0.62; }
+  .order-card.compact-card{ padding:13px; }
 
   .order-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
   .order-id-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -178,15 +213,6 @@
 
   /* ---------- Sidebar ---------- */
   .sidebar-block{ margin-bottom:28px; }
-  .compact-order{
-    background:#fff; border:1px solid var(--line); border-radius:10px;
-    padding:11px 13px; margin-bottom:8px; font-size:0.8rem;
-    display:flex; justify-content:space-between; align-items:center; gap:8px;
-  }
-  .compact-order .left{ min-width:0; }
-  .compact-order .pk{ font-family:'IBM Plex Mono',monospace; font-weight:700; }
-  .compact-order .nm{ color:var(--ink-soft); font-size:0.74rem; }
-  .compact-order .cnt{ font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--ink-soft); flex-shrink:0; }
 
   details.completed-block summary{
     cursor:pointer; font-size:0.85rem; font-weight:600; padding:8px 0;
@@ -226,6 +252,10 @@
       </div>
     </div>
     <div class="header-right">
+      <button class="test-switch" id="testSwitchBtn" type="button" aria-pressed="false" title="สลับโหมดทดสอบ / ใช้งานจริง">
+        <span class="test-switch-track"><span class="test-switch-thumb"></span></span>
+        <span class="test-switch-label" id="testSwitchLabel">กำลังโหลด…</span>
+      </button>
       <div class="conn-dot" id="connDot"><span class="dot"></span><span id="connLabel">เชื่อมต่อแล้ว</span></div>
       <div class="clock mono" id="clock">--:--:--</div>
     </div>
@@ -236,6 +266,7 @@
   <div class="summary-chip active-chip">กำลังทำ <span class="num mono" id="countActive">0</span></div>
   <div class="summary-chip upcoming-chip">รอคิว <span class="num mono" id="countUpcoming">0</span></div>
   <div class="summary-chip done-chip">เสร็จแล้ว <span class="num mono" id="countDone">0</span></div>
+  <div class="mode-chip" id="modeChip">โหมด: —</div>
 </div>
 
 <main>
@@ -288,7 +319,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import {
     getFirestore, collection, query, where, onSnapshot,
-    doc, updateDoc, deleteDoc, Timestamp, serverTimestamp
+    doc, updateDoc, deleteDoc, setDoc, Timestamp, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -332,7 +363,51 @@
   }
 
   // ============================================================
-  // Firestore subscription
+  // Test Switch (settings/app . testMode: "0" | "1")
+  // "1" = โหมดทดสอบ (Test)   "0" = โหมดใช้งานจริง (Real/Live)
+  // ฝั่งลูกค้าฟังค่าเดียวกันนี้แบบเรียลไทม์ผ่าน onSnapshot อยู่แล้ว
+  // ============================================================
+  const settingsRef = doc(db, "settings", "app");
+  let testModeValue = "0";
+
+  function renderTestSwitch(){
+    const btn = document.getElementById("testSwitchBtn");
+    const label = document.getElementById("testSwitchLabel");
+    const modeChip = document.getElementById("modeChip");
+    const isTest = testModeValue === "1";
+
+    btn.classList.toggle("on", isTest);
+    btn.setAttribute("aria-pressed", isTest ? "true" : "false");
+    label.textContent = isTest ? "โหมดทดสอบ (Test)" : "ใช้งานจริง (Live)";
+
+    modeChip.textContent = isTest ? "🧪 โหมด: ทดสอบ" : "✅ โหมด: ใช้งานจริง";
+    modeChip.classList.toggle("test", isTest);
+    modeChip.classList.toggle("live", !isTest);
+  }
+
+  onSnapshot(settingsRef, (snap) => {
+    const data = snap.exists() ? snap.data() : null;
+    testModeValue = (data && (data.testMode === "1" || data.testMode === 1)) ? "1" : "0";
+    renderTestSwitch();
+  }, (err) => {
+    console.error("[admin] settings listener error:", err);
+  });
+
+  document.getElementById("testSwitchBtn").onclick = async () => {
+    const next = testModeValue === "1" ? "0" : "1";
+    try{
+      await setDoc(settingsRef, { testMode: next, updatedAt: serverTimestamp() }, { merge: true });
+      showToast(next === "1"
+        ? "🧪 เปิดโหมดทดสอบแล้ว — ฝั่งลูกค้าจะเห็นภายในไม่กี่วินาที"
+        : "✅ กลับสู่โหมดใช้งานจริงแล้ว — ฝั่งลูกค้าจะเห็นภายในไม่กี่วินาที");
+    }catch(err){
+      console.error(err);
+      showToast("เปลี่ยนโหมดไม่สำเร็จ: " + (err.message || err));
+    }
+  };
+
+  // ============================================================
+  // Firestore subscription (orders)
   // ============================================================
   const since = Timestamp.fromDate(new Date(Date.now() - CONFIG.lookbackHours * 3600 * 1000));
   const q = query(ordersCol, where("createdAt", ">=", since));
@@ -496,7 +571,8 @@
   const PICKUP_OPTIONS = buildPickupOptions();
 
   // ============================================================
-  // Rendering: order card
+  // Rendering: order card (shared by both the active queue AND the
+  // waiting queue, so orders can be edited from either section)
   // ============================================================
   function statusLabel(s){
     return { pending: "รอดำเนินการ", preparing: "กำลังเตรียม", ready: "พร้อมรับ", completed: "เสร็จสิ้น" }[s] || s;
@@ -506,6 +582,7 @@
     const mins = o._minsUntil;
     const cdClass = countdownClass(mins);
     let cardClass = "order-card";
+    if (opts.compact) cardClass += " compact-card";
     if (o.topPriority) cardClass += " pinned";
     else if (cdClass === "overdue") cardClass += " overdue";
     else if (cdClass === "urgent") cardClass += " urgent";
@@ -590,6 +667,7 @@
   }
 
   function wireCard(cardEl, o){
+    if (!cardEl) return;
     cardEl.querySelectorAll('[data-status]').forEach(btn => {
       btn.onclick = () => setStatus(o.id, btn.dataset.status);
     });
@@ -654,18 +732,13 @@
       : `<div class="empty-state">ยังไม่มีออเดอร์ในคิวด่วนตอนนี้</div>`;
     active.forEach(o => wireCard(activeList.querySelector(`[data-id="${o.id}"]`), o));
 
+    // Waiting-queue orders now render as full cards too, so they can be
+    // edited/pinned/status-changed without waiting for the 30-min window.
     const upcomingList = document.getElementById("upcomingList");
     upcomingList.innerHTML = upcoming.length
-      ? upcoming.map(o => `
-        <div class="compact-order" data-id="${o.id}">
-          <div class="left">
-            <div class="pk mono">${escapeHtml(o.pickupTime || "—")}</div>
-            <div class="nm">${escapeHtml(o.customerName || "—")} · ${(o.items||[]).reduce((s,i)=>s+i.qty,0)} ชิ้น</div>
-          </div>
-          <div class="cnt">${countdownLabel(o._minsUntil)}</div>
-        </div>
-      `).join("")
+      ? upcoming.map(o => orderCardHtml(o, { compact: true })).join("")
       : `<div class="empty-state">ไม่มีออเดอร์รอคิว</div>`;
+    upcoming.forEach(o => wireCard(upcomingList.querySelector(`[data-id="${o.id}"]`), o));
 
     const completedList = document.getElementById("completedList");
     completedList.innerHTML = completed.length
