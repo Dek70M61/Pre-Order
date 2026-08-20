@@ -16,6 +16,12 @@
   - "1" = โหมดทดสอบ (Test) | "0" = โหมดใช้งานจริง (Real/Live)
   - กดสวิตช์เพื่อสลับค่า 0 <-> 1 ได้เลย ฝั่งลูกค้า (index.html) ฟัง
     ค่านี้แบบเรียลไทม์อยู่แล้ว จะอัปเดตภายในไม่กี่วินาทีโดยอัตโนมัติ
+  - ออเดอร์ที่ถูกส่งเข้ามาตอนระบบอยู่ในโหมดทดสอบจะมีฟิลด์
+    isTestOrder: true ติดมาด้วย แล้วจะโชว์เลขออเดอร์เป็น "Test-#XXXXXX"
+    แทน "#XXXXXX" ปกติ ให้แยกออกจากออเดอร์จริงได้ง่าย
+
+  CONFIG.appVersion ต้องตรงกับ CONFIG.appVersion ใน index.html เสมอ
+  CONFIG.brandLogoUrl ก็ควรตรงกับฝั่งลูกค้าเช่นกัน (โลโก้เดียวกัน)
 ============================================================= -->
 
 <style>
@@ -56,9 +62,12 @@
     width:36px; height:36px; border-radius:10px; background:var(--ink); color:#fff;
     display:flex; align-items:center; justify-content:center;
     font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px; flex-shrink:0;
+    overflow:hidden;
   }
+  .brand-mark img{ width:100%; height:100%; object-fit:cover; display:block; }
   .brand-text .store-name{ font-size:1.05rem; font-weight:700; line-height:1.15; }
-  .brand-text .tagline{ font-size:0.7rem; color:var(--ink-soft); }
+  .brand-text .tagline{ font-size:0.7rem; color:var(--ink-soft); display:flex; align-items:center; gap:6px; }
+  .version-tag{ opacity:0.65; }
   .header-right{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   .clock{ font-family:'IBM Plex Mono',monospace; font-size:0.9rem; color:var(--ink-soft); }
   .conn-dot{ display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--ink-soft); }
@@ -143,10 +152,12 @@
   .order-card.pinned{ border-left-color:var(--teal); background:linear-gradient(0deg, rgba(47,111,98,0.05), rgba(47,111,98,0.05)), #fff; }
   .order-card.status-completed{ opacity:0.62; }
   .order-card.compact-card{ padding:13px; }
+  .order-card.test-order{ border-left-color:var(--orange); background:repeating-linear-gradient(135deg, rgba(226,112,58,0.035) 0 10px, #fff 10px 20px); }
 
   .order-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
   .order-id-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .order-id{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:0.85rem; color:var(--ink); }
+  .order-id.is-test{ color:var(--orange-dark); }
   .pin-flag{ font-size:0.9rem; }
   .countdown{
     font-family:'IBM Plex Mono',monospace; font-size:0.72rem; font-weight:700;
@@ -226,6 +237,7 @@
   .completed-row .restore-btn{
     background:none; border:1px solid var(--line); border-radius:6px; padding:4px 8px; font-size:0.72rem; color:var(--ink-soft);
   }
+  .completed-row .code.is-test{ color:var(--orange-dark); font-weight:700; }
 
   .toast{
     position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
@@ -248,7 +260,7 @@
       <div class="brand-mark" id="brandMark">CC</div>
       <div class="brand-text">
         <div class="store-name" id="storeNameHeader">Chicken Cheek</div>
-        <div class="tagline">Admin · คิวออเดอร์</div>
+        <div class="tagline">Admin · คิวออเดอร์ <span class="version-tag mono" id="versionTag"></span></div>
       </div>
     </div>
     <div class="header-right">
@@ -307,6 +319,10 @@
   const CONFIG = {
     storeName: "Chicken Cheek",
     brandInitials: "CC",
+    // ใส่ลิงก์โลโก้ร้าน ควรตรงกับ CONFIG.brandLogoUrl ใน index.html
+    brandLogoUrl: "",
+    // ต้องตรงกับ CONFIG.appVersion ใน index.html เสมอ
+    appVersion: "1.1.0",
     activeWindowMinutes: 30,          // orders within this many minutes of pickup -> "active queue"
     lookbackHours: 20,                 // only load orders created within this many hours (keeps it light)
     currency: "฿",
@@ -336,8 +352,25 @@
   const db = getFirestore(app);
   const ordersCol = collection(db, "orders");
 
+  console.info("[ChickenCheek] admin.html app version:", CONFIG.appVersion);
+
+  function escapeHtml(str){
+    return String(str ?? "").replace(/[&<>"']/g, s => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    }[s]));
+  }
+
+  function renderBrandMark(){
+    const el = document.getElementById("brandMark");
+    if (CONFIG.brandLogoUrl){
+      el.innerHTML = `<img src="${escapeHtml(CONFIG.brandLogoUrl)}" alt="${escapeHtml(CONFIG.storeName)}">`;
+    } else {
+      el.textContent = CONFIG.brandInitials;
+    }
+  }
   document.getElementById("storeNameHeader").textContent = CONFIG.storeName;
-  document.getElementById("brandMark").textContent = CONFIG.brandInitials;
+  document.getElementById("versionTag").textContent = "v" + CONFIG.appVersion;
+  renderBrandMark();
 
   // ============================================================
   // STATE
@@ -347,11 +380,6 @@
   let editDraft = null;      // working copy of items/name/pickup while editing
 
   function fmt(n){ return CONFIG.currency + Number(n).toFixed(2); }
-  function escapeHtml(str){
-    return String(str ?? "").replace(/[&<>"']/g, s => ({
-      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
-    }[s]));
-  }
 
   let toastTimer;
   function showToast(msg){
@@ -430,7 +458,9 @@
   // Time helpers
   // ============================================================
   function pickupDateFor(order){
-    // pickupValue is "HH:MM" (24h) for a same-day pickup slot.
+    // pickupValue is "HH:MM" (24h) for a same-day pickup slot. Orders placed
+    // with "รับทันที (ASAP)" already arrive with a concrete HH:MM (resolved
+    // client-side at submit time), so no special-casing is needed here.
     if (!order.pickupValue) return null;
     const [h, m] = order.pickupValue.split(":").map(Number);
     const base = order.createdAt?.toDate ? order.createdAt.toDate() : new Date();
@@ -453,6 +483,14 @@
   }
   function createdAtMs(order){
     return order.createdAt?.toMillis ? order.createdAt.toMillis() : 0;
+  }
+  function to12h(h, m){
+    const period = h >= 12 ? "PM" : "AM";
+    let h12 = h % 12; if (h12 === 0) h12 = 12;
+    return `${h12}:${String(m).padStart(2,"0")} ${period}`;
+  }
+  function orderIdLabel(o){
+    return (o.isTestOrder ? "Test-" : "") + "#" + o.id.slice(-6).toUpperCase();
   }
 
   // ============================================================
@@ -549,7 +587,9 @@
   }
 
   // ============================================================
-  // Pickup time options (for the edit dropdown)
+  // Pickup time options (for the edit dropdown) — includes the same
+  // "รับทันที (ASAP)" option the customer site offers, so an order can
+  // also be rescheduled to "right now" from here.
   // ============================================================
   function buildPickupOptions(){
     const { start, end, intervalMinutes } = CONFIG.pickup;
@@ -557,13 +597,11 @@
     const [eh, em] = end.split(":").map(Number);
     let cur = sh * 60 + sm;
     const last = eh * 60 + em;
-    const options = [];
+    const options = [{ value: "now", label: "⚡ รับทันที (ASAP)" }];
     while (cur <= last){
       const h = Math.floor(cur / 60), m = cur % 60;
       const value = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
-      const period = h >= 12 ? "PM" : "AM";
-      let h12 = h % 12; if (h12 === 0) h12 = 12;
-      options.push({ value, label: `${h12}:${String(m).padStart(2,"0")} ${period}` });
+      options.push({ value, label: to12h(h, m) });
       cur += intervalMinutes;
     }
     return options;
@@ -587,6 +625,7 @@
     else if (cdClass === "overdue") cardClass += " overdue";
     else if (cdClass === "urgent") cardClass += " urgent";
     if (o.status === "completed") cardClass += " status-completed";
+    if (o.isTestOrder) cardClass += " test-order";
 
     const isEditing = openEditId === o.id;
 
@@ -595,7 +634,7 @@
       <div class="order-top">
         <div>
           <div class="order-id-row">
-            <span class="order-id">#${o.id.slice(-6).toUpperCase()}</span>
+            <span class="order-id ${o.isTestOrder ? "is-test" : ""}">${orderIdLabel(o)}</span>
             ${o.topPriority ? `<span class="pin-flag" title="ปักหมุดสำคัญ">📌</span>` : ""}
           </div>
           <div class="order-meta">
@@ -703,8 +742,16 @@
         inp.oninput = (e) => { editDraft.items[Number(inp.dataset.editNote)].notes = e.target.value; };
       });
       editPanel.querySelector('[data-action="save"]').onclick = () => {
-        const opt = PICKUP_OPTIONS.find(p => p.value === editDraft.pickupValue);
-        editDraft.pickupTimeLabel = opt ? opt.label : editDraft.pickupValue;
+        // "now" (รับทันที) is resolved to the actual clock time right here,
+        // at the moment of saving — same behaviour as the customer site.
+        if (editDraft.pickupValue === "now"){
+          const now = new Date();
+          editDraft.pickupValue = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+          editDraft.pickupTimeLabel = "รับทันที (ASAP) · " + to12h(now.getHours(), now.getMinutes());
+        } else {
+          const opt = PICKUP_OPTIONS.find(p => p.value === editDraft.pickupValue);
+          editDraft.pickupTimeLabel = opt ? opt.label : editDraft.pickupValue;
+        }
         saveEdit(o.id);
       };
       editPanel.querySelector('[data-action="cancel"]').onclick = () => {
@@ -744,7 +791,7 @@
     completedList.innerHTML = completed.length
       ? completed.slice(0, 25).map(o => `
         <div class="completed-row" data-id="${o.id}">
-          <span>#${o.id.slice(-6).toUpperCase()} · ${escapeHtml(o.customerName || "—")} · ${fmt(o.total||0)}</span>
+          <span><span class="code ${o.isTestOrder ? "is-test" : ""}">${orderIdLabel(o)}</span> · ${escapeHtml(o.customerName || "—")} · ${fmt(o.total||0)}</span>
           <button class="restore-btn" data-restore="${o.id}">ย้อนกลับ</button>
         </div>
       `).join("")
