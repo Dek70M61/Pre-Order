@@ -18,6 +18,12 @@
     ถ้ายังไม่มีรูป จะโชว์กล่องว่างแทน
   - CONFIG.appVersion ต้องตรงกับ CONFIG.appVersion ใน admin.html เสมอ
     (ไว้เช็คว่าไฟล์ทั้งสองฝั่งเป็นเวอร์ชันคู่กันจริง)
+  - สินค้าหมด (Out of stock): ควบคุมจาก admin.html — ใน admin จะมีสวิตช์ติ๊ก
+    "หมดแล้ว" ต่อสินค้าแต่ละชิ้น ค่านี้เก็บที่ Firestore เอกสาร
+    settings/stock (ฟิลด์ชื่อเดียวกับ id สินค้า เช่น "food-1": true) และ
+    หน้านี้ฟังค่าแบบเรียลไทม์ผ่าน onSnapshot — สินค้าที่ id ตรงกับ
+    admin.html CONFIG.products ต้องตรงกับ id ที่นี่เสมอ ไม่งั้นสวิตช์จะ
+    ควบคุมสินค้าผิดตัว
   - ไฟล์นี้เป็นไฟล์เดียวจบ อัปโหลดขึ้น Firebase Hosting / Netlify /
     GitHub Pages ได้เลย
 ============================================================= -->
@@ -169,6 +175,8 @@
     padding:20px; box-shadow:var(--shadow);
     display:grid; grid-template-columns: 96px 1fr; gap:16px;
   }
+  .food-card.sold-out{ opacity:0.6; }
+  .food-card.sold-out .food-thumb{ filter:grayscale(1); }
   .food-thumb{
     width:96px; height:96px; border-radius:10px;
     background: repeating-linear-gradient(135deg, var(--paper-dim) 0 6px, #fff 6px 12px);
@@ -182,6 +190,14 @@
   .food-name{ font-size:1.15rem; font-weight:700; }
   .food-desc{ color:var(--ink-soft); font-size:0.9rem; margin-top:4px; max-width:48ch; }
   .price{ font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--orange-dark); font-size:1.05rem; white-space:nowrap; }
+
+  .sold-out-badge{
+    display:inline-block; font-size:0.66rem; font-weight:700; color:var(--danger);
+    border:1px dashed var(--danger); border-radius:6px; padding:2px 7px;
+    vertical-align:middle; white-space:nowrap;
+  }
+  .food-title-row .sold-out-badge{ margin-left:8px; }
+  .sold-out-note{ margin-top:10px; font-size:0.85rem; color:var(--danger); font-style:italic; }
 
   .qty-row{ display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap; }
   .stepper{ display:flex; align-items:center; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
@@ -215,6 +231,8 @@
     background:#fff; border:1px solid var(--line); border-radius:12px;
     padding:14px; display:flex; flex-direction:column; gap:8px; position:relative;
   }
+  .drink-card.sold-out{ opacity:0.55; }
+  .drink-card.sold-out .drink-thumb{ filter:grayscale(1); }
   .drink-card .tag{
     position:absolute; top:10px; right:10px;
     font-family:'IBM Plex Mono',monospace; font-size:0.65rem; color:var(--ink-soft);
@@ -625,7 +643,7 @@
     brandLogoUrl: "IMG_1386.JPG",
 
     // ต้องตรงกับ CONFIG.appVersion ใน admin.html เสมอ
-    appVersion: "1.1.0",
+    appVersion: "1.2.0",
 
     food: {
       id: "food-1",
@@ -705,6 +723,15 @@
     console.error("[preorder] settings listener error:", err);
   });
 
+  // Out-of-stock flags — reads settings/stock, written by admin.html's
+  // per-product "หมดแล้ว" switches. Keys are product ids (food.id / drink.id).
+  onSnapshot(doc(db, "settings", "stock"), (snap) => {
+    stockMap = snap.exists() ? snap.data() : {};
+    renderAll();
+  }, (err) => {
+    console.error("[preorder] stock listener error:", err);
+  });
+
   // ============================================================
   // 3. STATE
   // ============================================================
@@ -713,6 +740,7 @@
   let titleFlashTimer = null;
   let selectedPaymentMethod = "cash";
   let isTestMode = false; // mirrors settings/app.testMode ("1" = test) from Firestore
+  let stockMap = {};       // mirrors settings/stock — { [productId]: true } means out of stock
   const ORIGINAL_TITLE = CONFIG.storeName + " — สั่งล่วงหน้า";
 
   function loadCart(){
@@ -733,6 +761,7 @@
   function cartItemsArray(){ return Object.values(cart).filter(i => i.qty > 0); }
   function cartTotal(){ return cartItemsArray().reduce((sum, i) => sum + i.price * i.qty, 0); }
   function cartCount(){ return cartItemsArray().reduce((sum, i) => sum + i.qty, 0); }
+  function isOutOfStock(id){ return !!stockMap[id]; }
 
   // ============================================================
   // 4. RENDER: header / brand
@@ -760,33 +789,40 @@
     const f = CONFIG.food;
     const existing = cart[f.id];
     const qty = existing ? existing.qty : 0;
+    const isOut = isOutOfStock(f.id);
 
     foodContainer.innerHTML = `
-      <div class="food-card">
+      <div class="food-card ${isOut ? "sold-out" : ""}">
         <div class="food-thumb">${f.image ? `<img src="${escapeHtml(f.image)}" alt="${escapeHtml(f.name)}">` : `รูปภาพ<br>(ที่ว่าง)`}</div>
         <div style="min-width:0;">
           <div class="food-title-row">
             <div>
-              <div class="food-name">${escapeHtml(f.name)}</div>
+              <div class="food-name">${escapeHtml(f.name)}${isOut ? `<span class="sold-out-badge">หมดแล้ว</span>` : ""}</div>
               <div class="food-desc">${escapeHtml(f.description)}</div>
             </div>
             <div class="price mono">${fmt(f.price)}</div>
           </div>
-          <div class="qty-row">
-            <div class="stepper">
-              <button type="button" data-action="dec" aria-label="ลดจำนวน">−</button>
-              <span class="qty-val mono" id="foodQtyVal">${qty}</span>
-              <button type="button" data-action="inc" aria-label="เพิ่มจำนวน">+</button>
+          ${isOut ? `
+            <div class="sold-out-note">สินค้าหมดชั่วคราว ขออภัยในความไม่สะดวก</div>
+          ` : `
+            <div class="qty-row">
+              <div class="stepper">
+                <button type="button" data-action="dec" aria-label="ลดจำนวน">−</button>
+                <span class="qty-val mono" id="foodQtyVal">${qty}</span>
+                <button type="button" data-action="inc" aria-label="เพิ่มจำนวน">+</button>
+              </div>
             </div>
-          </div>
-          <div class="notes-field">
-            <label for="foodNotes">โน้ตถึงเชฟ (ถ้ามี)</label>
-            <textarea id="foodNotes" placeholder="${escapeHtml(f.notesPlaceholder)}">${escapeHtml(existing?.notes || "")}</textarea>
-          </div>
-          <button class="add-btn" id="foodAddBtn" type="button">+ เพิ่มลงตะกร้า</button>
+            <div class="notes-field">
+              <label for="foodNotes">โน้ตถึงเชฟ (ถ้ามี)</label>
+              <textarea id="foodNotes" placeholder="${escapeHtml(f.notesPlaceholder)}">${escapeHtml(existing?.notes || "")}</textarea>
+            </div>
+            <button class="add-btn" id="foodAddBtn" type="button">+ เพิ่มลงตะกร้า</button>
+          `}
         </div>
       </div>
     `;
+
+    if (isOut) return;
 
     let localQty = qty;
     const qtyEl = document.getElementById("foodQtyVal");
@@ -816,17 +852,20 @@
     document.getElementById("drinksCountHint").textContent = CONFIG.drinks.length + " ตัวเลือก";
     drinksContainer.innerHTML = CONFIG.drinks.map(d => {
       const qty = cart[d.id]?.qty || 0;
+      const isOut = isOutOfStock(d.id);
       return `
-        <div class="drink-card">
+        <div class="drink-card ${isOut ? "sold-out" : ""}">
           ${d.tag ? `<span class="tag">${escapeHtml(d.tag)}</span>` : ""}
           ${d.image ? `<div class="drink-thumb"><img src="${escapeHtml(d.image)}" alt="${escapeHtml(d.name)}"></div>` : ""}
           <div class="drink-name">${escapeHtml(d.name)}</div>
           <div class="drink-desc">${escapeHtml(d.description || "")}</div>
           <div class="drink-bottom">
             <span class="drink-price mono">${fmt(d.price)}</span>
-            <button class="drink-add" type="button" data-id="${d.id}" aria-label="เพิ่ม ${escapeHtml(d.name)}">+</button>
+            ${isOut
+              ? `<span class="sold-out-badge">หมดแล้ว</span>`
+              : `<button class="drink-add" type="button" data-id="${d.id}" aria-label="เพิ่ม ${escapeHtml(d.name)}">+</button>`}
           </div>
-          ${qty > 0 ? `<div style="font-size:0.72rem;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;">อยู่ในตะกร้า ${qty}</div>` : ""}
+          ${(!isOut && qty > 0) ? `<div style="font-size:0.72rem;color:var(--teal-dark);font-family:'IBM Plex Mono',monospace;">อยู่ในตะกร้า ${qty}</div>` : ""}
         </div>
       `;
     }).join("");
@@ -854,10 +893,12 @@
     if (items.length === 0){
       return `<div class="empty-cart">ยังไม่มีรายการในตะกร้า<br>เลือกเมนูด้านบนเพื่อเริ่มสั่ง</div>`;
     }
-    return items.map(i => `
+    return items.map(i => {
+      const isOut = isOutOfStock(i.id);
+      return `
       <div class="cart-item">
         <div class="cart-item-main">
-          <div class="cart-item-name">${i.qty} × ${escapeHtml(i.name)}</div>
+          <div class="cart-item-name">${i.qty} × ${escapeHtml(i.name)}${isOut ? `<span class="sold-out-badge" style="margin-left:6px;">หมดแล้ว</span>` : ""}</div>
           ${i.notes ? `<div class="cart-item-notes">“${escapeHtml(i.notes)}”</div>` : ""}
           <div class="cart-item-price mono">${fmt(i.price * i.qty)}</div>
         </div>
@@ -870,7 +911,8 @@
           <button class="remove-link" data-id="${i.id}" data-action="remove" type="button">ลบ</button>
         </div>
       </div>
-    `).join("");
+    `;
+    }).join("");
   }
 
   function wireCartBody(container){
@@ -993,8 +1035,22 @@
     updatePaymentUI();
   });
 
+  // Blocks opening checkout (or submitting) if anything currently in the
+  // cart has since been marked out of stock — returns the offending items.
+  function outOfStockItemsInCart(){
+    return cartItemsArray().filter(i => isOutOfStock(i.id));
+  }
+
   function openCheckout(){
     if (cartCount() === 0) return;
+
+    const blocked = outOfStockItemsInCart();
+    if (blocked.length > 0){
+      showToast("มีสินค้าหมดในตะกร้า กรุณาลบออกก่อน: " + blocked.map(i => i.name).join(", "));
+      openDrawer();
+      return;
+    }
+
     submitErrorEl.classList.remove("show");
     submitErrorEl.textContent = "";
     pickupSelect.innerHTML = buildPickupTimes().map(o => `<option value="${o.value}">${o.label}</option>`).join("");
@@ -1116,6 +1172,16 @@
   confirmBtn.onclick = async () => {
     const items = cartItemsArray();
     if (items.length === 0) return;
+
+    // Re-check stock right before submitting — it may have changed while
+    // the checkout modal was open.
+    const stillBlocked = outOfStockItemsInCart();
+    if (stillBlocked.length > 0){
+      showToast("สินค้าบางอย่างหมดระหว่างที่คุณกำลังสั่ง กรุณาลบออกก่อน: " + stillBlocked.map(i => i.name).join(", "));
+      closeCheckout();
+      openDrawer();
+      return;
+    }
 
     // Belt-and-braces: even though the online option is disabled during
     // test mode, refuse to submit an online-payment order if it somehow
