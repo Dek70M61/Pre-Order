@@ -21,6 +21,14 @@
     isTestOrder: true ติดมาด้วย แล้วจะโชว์เลขออเดอร์เป็น "Test-#XXXXXX"
     แทน "#XXXXXX" ปกติ ให้แยกออกจากออเดอร์จริงได้ง่าย
 
+  Stock Switches:
+  - รายชื่อสินค้าที่ใช้ติ๊ก "หมดแล้ว" อยู่ที่ CONFIG.products ด้านล่าง
+    (id + name เท่านั้น) — id ของแต่ละสินค้า *ต้องตรงกับ*
+    CONFIG.food.id / CONFIG.drinks[].id ใน index.html เป๊ะๆ ไม่งั้นสวิตช์
+    จะไปโดนสินค้าผิดตัว ถ้าเพิ่ม/ลบเมนูฝั่งลูกค้า ต้องมาแก้ตรงนี้ด้วย
+  - ค่าที่ติ๊กเก็บที่ Firestore เอกสาร settings/stock (ฟิลด์ชื่อ = id สินค้า,
+    ค่า true แปลว่าหมด) ฝั่งลูกค้าฟังค่านี้แบบเรียลไทม์เช่นกัน
+
   CONFIG.appVersion ต้องตรงกับ CONFIG.appVersion ใน index.html เสมอ
   CONFIG.brandLogoUrl ก็ควรตรงกับฝั่งลูกค้าเช่นกัน (โลโก้เดียวกัน)
 ============================================================= -->
@@ -226,6 +234,33 @@
   /* ---------- Sidebar ---------- */
   .sidebar-block{ margin-bottom:28px; }
 
+  /* ---------- Stock toggles ---------- */
+  .stock-list{ display:flex; flex-direction:column; gap:8px; }
+  .stock-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:#fff; border:1px solid var(--line); border-radius:10px; padding:8px 8px 8px 12px;
+  }
+  .stock-row.is-out{ border-color:var(--orange); background:rgba(226,112,58,0.06); }
+  .stock-name{ font-size:0.85rem; font-weight:600; min-width:0; }
+  .stock-toggle{
+    display:inline-flex; align-items:center; gap:7px; border:none; background:none; padding:2px; flex-shrink:0;
+  }
+  .stock-toggle-track{
+    width:34px; height:20px; border-radius:999px; background:var(--line);
+    position:relative; flex-shrink:0; transition:background 0.18s ease;
+  }
+  .stock-toggle-thumb{
+    position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.25); transition:transform 0.18s ease;
+  }
+  .stock-toggle.on .stock-toggle-track{ background:var(--orange); }
+  .stock-toggle.on .stock-toggle-thumb{ transform:translateX(14px); }
+  .stock-toggle-label{
+    font-size:0.7rem; font-weight:700; color:var(--ink-soft); white-space:nowrap;
+    min-width:52px; text-align:right;
+  }
+  .stock-toggle.on .stock-toggle-label{ color:var(--orange-dark); }
+
   details.completed-block summary{
     cursor:pointer; font-size:0.85rem; font-weight:600; padding:8px 0;
     display:flex; align-items:center; justify-content:space-between;
@@ -296,6 +331,14 @@
   <div>
     <div class="sidebar-block">
       <div class="section-head">
+        <h2>สินค้า / สต๊อก</h2>
+        <span class="hint">แตะเพื่อทำเครื่องหมายว่าหมด</span>
+      </div>
+      <div class="stock-list" id="stockList"></div>
+    </div>
+
+    <div class="sidebar-block">
+      <div class="section-head">
         <h2>รอคิว</h2>
         <span class="hint" id="upcomingHint">0 ออเดอร์</span>
       </div>
@@ -323,11 +366,28 @@
     // ใส่ลิงก์โลโก้ร้าน ควรตรงกับ CONFIG.brandLogoUrl ใน index.html
     brandLogoUrl: "IMG_1386.JPG",
     // ต้องตรงกับ CONFIG.appVersion ใน index.html เสมอ
-    appVersion: "1.1.0",
+    appVersion: "1.2.0",
     activeWindowMinutes: 30,          // orders within this many minutes of pickup -> "active queue"
     lookbackHours: 20,                 // only load orders created within this many hours (keeps it light)
     currency: "฿",
-    pickup: { start: "08:30", end: "15:00", intervalMinutes: 15 } // must match the customer site
+    pickup: { start: "08:30", end: "15:00", intervalMinutes: 15 }, // must match the customer site
+
+    // Products available for the "หมดแล้ว" (out of stock) switches below.
+    // id MUST exactly match CONFIG.food.id / CONFIG.drinks[].id in index.html.
+    products: {
+      food: [
+        { id: "food-1", name: "หมี่ไก่ฉีก" }
+      ],
+      drinks: [
+        { id: "drink-1", name: "โค้ก" },
+        { id: "drink-2", name: "เป็ปซี่" },
+        { id: "drink-3", name: "แฟนต้าเขียว" },
+        { id: "drink-4", name: "แฟนต้าแดง" },
+        { id: "drink-5", name: "สไปร์ท" },
+        { id: "drink-6", name: "แฟนต้าองุ่น" },
+        { id: "drink-7", name: "แฟนต้าลิ้นจี่" }
+      ]
+    }
   };
 
   // ============================================================
@@ -434,6 +494,54 @@
       showToast("เปลี่ยนโหมดไม่สำเร็จ: " + (err.message || err));
     }
   };
+
+  // ============================================================
+  // Stock Switches (settings/stock . { [productId]: true } = หมดแล้ว)
+  // ฝั่งลูกค้าฟังค่าเดียวกันนี้แบบเรียลไทม์ผ่าน onSnapshot เช่นกัน
+  // ============================================================
+  const stockRef = doc(db, "settings", "stock");
+  let stockMap = {};
+
+  function allProducts(){
+    return [...CONFIG.products.food, ...CONFIG.products.drinks];
+  }
+
+  function renderStockList(){
+    const list = document.getElementById("stockList");
+    list.innerHTML = allProducts().map(p => {
+      const isOut = !!stockMap[p.id];
+      return `
+        <div class="stock-row ${isOut ? "is-out" : ""}">
+          <span class="stock-name">${escapeHtml(p.name)}</span>
+          <button class="stock-toggle ${isOut ? "on" : ""}" type="button" data-id="${p.id}" aria-pressed="${isOut}" title="ทำเครื่องหมายว่าสินค้านี้หมดหรือมีของ">
+            <span class="stock-toggle-track"><span class="stock-toggle-thumb"></span></span>
+            <span class="stock-toggle-label">${isOut ? "หมดแล้ว" : "มีของ"}</span>
+          </button>
+        </div>
+      `;
+    }).join("");
+
+    list.querySelectorAll(".stock-toggle").forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.dataset.id;
+        const next = !stockMap[id];
+        try{
+          await setDoc(stockRef, { [id]: next, updatedAt: serverTimestamp() }, { merge: true });
+          showToast(next ? "ทำเครื่องหมายว่าหมดแล้ว" : "เปิดขายอีกครั้ง");
+        }catch(err){
+          console.error(err);
+          showToast("อัปเดตสต๊อกไม่สำเร็จ: " + (err.message || err));
+        }
+      };
+    });
+  }
+
+  onSnapshot(stockRef, (snap) => {
+    stockMap = snap.exists() ? snap.data() : {};
+    renderStockList();
+  }, (err) => {
+    console.error("[admin] stock listener error:", err);
+  });
 
   // ============================================================
   // Firestore subscription (orders)
